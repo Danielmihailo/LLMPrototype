@@ -46,16 +46,16 @@ export async function brainInferStream(
     buffer = parts.pop() ?? "";
     for (const part of parts) {
       if (!part.trim()) continue;
-      const dataLine = part.split("\n").find((l) => l.startsWith("data: "));
+      const lines = part.split("\n");
+      const eventLine = lines.find((l) => l.startsWith("event: "));
+      const dataLine = lines.find((l) => l.startsWith("data: "));
       if (!dataLine) continue;
-      const data = JSON.parse(dataLine.slice(6)) as {
-        type: string;
-        data: unknown;
-      };
-      if (data.type === "token") {
-        onToken(String(data.data));
-      } else if (data.type === "done") {
-        finalResult = data.data as BrainInferResponse;
+      const eventType = eventLine?.slice(7).trim();
+      const rawData = dataLine.slice(6);
+      if (eventType === "token") {
+        try { onToken(JSON.parse(rawData) as string); } catch { onToken(rawData); }
+      } else if (eventType === "done") {
+        try { finalResult = JSON.parse(rawData) as BrainInferResponse; } catch { /* ignore */ }
       }
     }
   }
