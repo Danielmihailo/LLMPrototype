@@ -448,36 +448,39 @@ export function ChatPage() {
     }
   };
 
-  // Keep listenAgainRef always up to date so speak() callback can call it safely
-  const startListeningLoop = useCallback(() => {
+  // Always-fresh function to start one listening round.
+  // Uses a ref so the speak() onDone closure always sees the latest version.
+  const startOneRound = useCallback(() => {
     if (!convRef.current) return;
+    // Fresh recognition instance every call (continuous=false is reliable)
     speech.startListening(
       (transcript) => {
+        if (!transcript.trim()) return;
         voiceInputRef.current = true;
         setInput(transcript);
         void send(transcript);
       },
       () => {
-        // recognition ended without result (timeout/error)
+        // recognition ended without usable result — stay ready
         if (convRef.current && !sending) setOrbState("idle");
       },
     );
   }, [speech, send, sending]);
 
-  // Always keep the ref in sync so the speak callback can trigger it
-  listenAgainRef.current = startListeningLoop;
+  // Keep ref in sync so speak's onDone can call it
+  listenAgainRef.current = startOneRound;
 
   const handleMic = () => {
     if (convRef.current || speech.isListening) {
-      // Stop conversation mode
+      // Exit conversation mode
       convRef.current = false;
       speech.stopListening();
       speech.stopSpeaking();
       setOrbState("idle");
     } else {
-      // Enter conversation mode
+      // Enter conversation mode — start first round
       convRef.current = true;
-      startListeningLoop();
+      startOneRound();
     }
   };
 
@@ -691,29 +694,46 @@ export function ChatPage() {
             "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%)",
         }}
       >
-        {error && (
-          <p className="text-rose-400/60 text-xs text-center mb-2">{error}</p>
+        {/* Error / mic permission notice */}
+        {(error || speech.micError) && (
+          <p className="text-rose-400/60 text-xs text-center mb-2">
+            {speech.micError === "permission-denied"
+              ? "Mikrofon-Zugriff verweigert — bitte in den Browser-Einstellungen erlauben"
+              : speech.micError === "not-supported"
+              ? "Spracherkennung wird von diesem Browser nicht unterstützt"
+              : speech.micError === "network"
+              ? "Netzwerkfehler bei der Spracherkennung"
+              : error}
+          </p>
         )}
 
         <div
           className="flex items-center gap-2 max-w-2xl mx-auto"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.11)" }}
         >
-          {/* Mic — always Mic icon. Purple + pulsing dot = conversation active */}
+          {/* Mic button */}
           {speech.supported && (
             <button
               onClick={handleMic}
               className="relative shrink-0 p-2 transition-colors"
               style={{
-                color: (speech.isListening || speech.isSpeaking)
+                color: speech.micError === "permission-denied"
+                  ? "rgba(248,113,113,0.7)"
+                  : (speech.isListening || speech.isSpeaking || convRef.current)
                   ? "rgba(167,139,250,1)"
                   : "rgba(255,255,255,0.28)",
               }}
-              title={convRef.current ? "Gespräch beenden" : "Gespräch starten"}
+              title={
+                speech.micError === "permission-denied"
+                  ? "Mikrofon gesperrt"
+                  : convRef.current
+                  ? "Gespräch beenden"
+                  : "Gespräch starten"
+              }
             >
               <Mic className="size-[18px]" />
-              {/* pulsing dot = conversation mode on */}
-              {convRef.current && (
+              {/* pulsing dot = recording / conversation active */}
+              {(speech.isListening || convRef.current) && !speech.micError && (
                 <motion.span
                   className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-500"
                   animate={{ opacity: [1, 0.15, 1] }}
@@ -729,7 +749,13 @@ export function ChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={speech.isListening ? "Hört zu …" : "Sprich mit JARVIS …"}
+            placeholder={
+              speech.isListening
+                ? "Hört zu …"
+                : convRef.current
+                ? "JARVIS hört zu …"
+                : "Sprich mit JARVIS …"
+            }
             disabled={sending || !state.conversationId || speech.isListening}
             autoComplete="off"
             className="flex-1 bg-transparent text-white text-sm placeholder:text-white/22 outline-none py-3 disabled:opacity-40"
