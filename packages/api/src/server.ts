@@ -47,6 +47,11 @@ function corsHeaders(origin?: string): Record<string, string> {
   };
 }
 
+function setCors(res: import("node:http").ServerResponse, origin?: string): void {
+  const h = corsHeaders(origin);
+  Object.entries(h).forEach(([k, v]) => res.setHeader(k, v));
+}
+
 async function handleRequest(
   req: import("node:http").IncomingMessage,
   res: import("node:http").ServerResponse,
@@ -54,63 +59,66 @@ async function handleRequest(
   const url = new URL(req.url ?? "/", `http://localhost:${config.port}`);
   const path = url.pathname;
   const method = req.method ?? "GET";
-  const headers = corsHeaders(req.headers.origin);
 
   if (method === "OPTIONS") {
-    res.writeHead(204, headers);
+    res.writeHead(204, corsHeaders(req.headers.origin));
     res.end();
     return;
   }
 
   try {
     if (path === "/v1/auth/register" && method === "POST") {
+      setCors(res, req.headers.origin);
       await handleRegister(req, res);
       return;
     }
     if (path === "/v1/auth/login" && method === "POST") {
+      setCors(res, req.headers.origin);
       await handleLogin(req, res);
       return;
     }
     if (path === "/v1/auth/logout" && method === "POST") {
+      setCors(res, req.headers.origin);
       await handleLogout(req, res);
       return;
     }
 
     const userId = await requireAuth(req);
     if (userId && !(await checkUserRateLimit(userId))) {
-      res.writeHead(429, { ...headers, "Content-Type": "application/json" });
+      setCors(res, req.headers.origin);
+      res.writeHead(429, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Rate limit exceeded" }));
       return;
     }
 
     if (path === "/v1/shops" && method === "GET" && userId) {
-      res.writeHead(200, headers);
+      setCors(res, req.headers.origin);
       await handleListShops(userId, res);
       return;
     }
     if (path === "/v1/shops/connect/shopify/start" && method === "GET" && userId) {
-      res.writeHead(200, headers);
+      setCors(res, req.headers.origin);
       await handleShopifyStart(userId, url, res);
       return;
     }
     if (path === "/v1/shops/connect/shopify/callback" && method === "GET") {
-      res.writeHead(200, headers);
+      setCors(res, req.headers.origin);
       await handleShopifyCallback(url, res);
       return;
     }
     if (path === "/v1/shops/connect/wordpress" && method === "POST" && userId) {
-      res.writeHead(201, headers);
+      setCors(res, req.headers.origin);
       await handleWordPressConnect(userId, req, res);
       return;
     }
     if (path === "/v1/shops/greenfield" && method === "POST" && userId) {
-      res.writeHead(201, headers);
+      setCors(res, req.headers.origin);
       await handleGreenfieldCreate(userId, req, res);
       return;
     }
 
     if (path === "/v1/conversations" && method === "POST" && userId) {
-      res.writeHead(201, headers);
+      setCors(res, req.headers.origin);
       await handleCreateConversation(userId, req, res);
       return;
     }
@@ -118,12 +126,12 @@ async function handleRequest(
     const msgMatch = path.match(/^\/v1\/conversations\/([^/]+)\/messages$/);
     if (msgMatch && userId) {
       if (method === "GET") {
-        res.writeHead(200, headers);
+        setCors(res, req.headers.origin);
         await handleListMessages(msgMatch[1], userId, res);
         return;
       }
       if (method === "POST") {
-        Object.assign(res, { _cors: headers });
+        setCors(res, req.headers.origin);
         await handleSendMessage(msgMatch[1], userId, req, res);
         return;
       }
@@ -133,52 +141,52 @@ async function handleRequest(
     if (actionMatch && userId) {
       const [, actionId, sub] = actionMatch;
       if (sub === "/confirm" && method === "POST") {
-        res.writeHead(200, headers);
+        setCors(res, req.headers.origin);
         await handleConfirmAction(actionId, userId, req, res);
         return;
       }
       if (sub === "/rollback" && method === "POST") {
-        res.writeHead(200, headers);
+        setCors(res, req.headers.origin);
         await handleRollbackAction(actionId, userId, res);
         return;
       }
       if (!sub && method === "GET") {
-        res.writeHead(200, headers);
+        setCors(res, req.headers.origin);
         await handleGetAction(actionId, res);
         return;
       }
     }
 
     if (path === "/v1/knowledge/docs" && method === "POST" && userId) {
-      res.writeHead(201, headers);
+      setCors(res, req.headers.origin);
       await handleUploadDoc(userId, req, res);
       return;
     }
     if (path === "/v1/knowledge/web-fetch" && method === "POST" && userId) {
-      res.writeHead(201, headers);
+      setCors(res, req.headers.origin);
       await handleWebFetch(userId, req, res);
       return;
     }
 
     if (path === "/v1/account/export" && method === "GET" && userId) {
-      res.writeHead(200, headers);
+      setCors(res, req.headers.origin);
       await handleExportAccount(userId, res);
       return;
     }
     if (path === "/v1/account/delete" && method === "DELETE" && userId) {
-      res.writeHead(204, headers);
+      setCors(res, req.headers.origin);
       await handleDeleteAccount(userId, res);
       return;
     }
 
     if (path === "/v1/admin/models" && method === "GET" && userId) {
-      res.writeHead(200, headers);
+      setCors(res, req.headers.origin);
       await handleListModels(res);
       return;
     }
     const promoteMatch = path.match(/^\/v1\/admin\/models\/([^/]+)\/promote$/);
     if (promoteMatch && method === "POST" && userId) {
-      res.writeHead(200, headers);
+      setCors(res, req.headers.origin);
       await handlePromoteModel(res, promoteMatch[1]);
       return;
     }
@@ -186,30 +194,36 @@ async function handleRequest(
     const previewMatch = path.match(/^\/v1\/greenfield\/([^/]+)\/preview$/);
     if (previewMatch && method === "GET") {
       const html = getShopHtml(previewMatch[1]);
-      res.writeHead(200, { ...headers, "Content-Type": "text/html" });
+      setCors(res, req.headers.origin);
+      res.writeHead(200, { "Content-Type": "text/html" });
       res.end(html);
       return;
     }
 
     const widgetMatch = path.match(/^\/widgets\/(.+)\.js$/);
     if (widgetMatch && method === "GET") {
-      res.writeHead(200, { ...headers, "Content-Type": "application/javascript" });
+      setCors(res, req.headers.origin);
+      res.writeHead(200, { "Content-Type": "application/javascript" });
       res.end(`window.JARVIS_CHAT_ID="${widgetMatch[1]}";console.log("JARVIS Live Chat active");`);
       return;
     }
 
     if (path === "/health") {
-      res.writeHead(200, { ...headers, "Content-Type": "application/json" });
+      res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ status: "ok" }));
       return;
     }
 
-    res.writeHead(404, { ...headers, "Content-Type": "application/json" });
+    setCors(res, req.headers.origin);
+    res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Not found" }));
   } catch (err) {
     console.error(err);
-    res.writeHead(500, { ...headers, "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: String(err) }));
+    if (!res.headersSent) {
+      setCors(res, req.headers.origin);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
   }
 }
 
