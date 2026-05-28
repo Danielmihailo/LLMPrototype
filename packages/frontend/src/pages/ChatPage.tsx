@@ -13,9 +13,6 @@ import {
   Send,
   Loader2,
   Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
   Store,
   X,
   ChevronRight,
@@ -324,7 +321,6 @@ export function ChatPage() {
   const [sending, setSending] = useState(false);
   const [actionState, setActionState] = useState<ActionState | null>(null);
   const [error, setError] = useState("");
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [orbState, setOrbState] = useState<OrbState>("idle");
   const [shopModal, setShopModal] = useState(false);
 
@@ -332,6 +328,8 @@ export function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const jarvisTextRef = useRef("");
+  // true when send was triggered by voice → always speak the response
+  const voiceInputRef = useRef(false);
 
   const speech = useSpeech("de-DE");
 
@@ -411,11 +409,13 @@ export function ChatPage() {
           setActionState({ actions: result.actions, actionId: result.action_id });
         }
 
-        if (voiceEnabled && jarvisTextRef.current) {
+        // Speak if this message was sent via voice
+        if (voiceInputRef.current && jarvisTextRef.current) {
           speech.speak(jarvisTextRef.current, () => setOrbState("idle"));
         } else {
           setOrbState("idle");
         }
+        voiceInputRef.current = false;
       } catch (err) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -424,13 +424,14 @@ export function ChatPage() {
               : m,
           ),
         );
+        voiceInputRef.current = false;
         setOrbState("idle");
       } finally {
         setSending(false);
         inputRef.current?.focus();
       }
     },
-    [input, state.conversationId, sending, voiceEnabled, speech],
+    [input, state.conversationId, sending, speech],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -447,6 +448,7 @@ export function ChatPage() {
     } else {
       speech.startListening(
         (transcript) => {
+          voiceInputRef.current = true; // mark as voice → JARVIS will speak back
           setInput(transcript);
           void send(transcript);
         },
@@ -527,18 +529,8 @@ export function ChatPage() {
           </AnimatePresence>
         </div>
 
-        {/* voice toggle */}
-        <button
-          onClick={() => {
-            if (voiceEnabled) { speech.stopSpeaking(); setOrbState("idle"); }
-            setVoiceEnabled((v) => !v);
-          }}
-          className="pointer-events-auto transition-colors p-1.5"
-          style={{ color: voiceEnabled ? "rgba(34,211,238,0.55)" : "rgba(255,255,255,0.15)" }}
-          title={voiceEnabled ? "Stimme deaktivieren" : "Stimme aktivieren"}
-        >
-          {voiceEnabled ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
-        </button>
+        {/* placeholder to keep flex layout centered */}
+        <div className="size-7" />
       </div>
 
       {/* ── ACTION CONFIRM BAR ── */}
@@ -683,21 +675,27 @@ export function ChatPage() {
           className="flex items-center gap-2 max-w-2xl mx-auto"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.11)" }}
         >
-          {/* Mic */}
+          {/* Mic — always Mic icon, never crossed-out */}
           {speech.supported && (
             <button
               onClick={handleMic}
               disabled={sending}
-              className={`shrink-0 p-2 transition-colors ${
-                speech.isListening
-                  ? "text-purple-400/90"
-                  : "text-white/25 hover:text-white/55"
-              }`}
+              className="relative shrink-0 p-2 transition-colors"
+              style={{
+                color: speech.isListening
+                  ? "rgba(167,139,250,1)"   // purple when active
+                  : "rgba(255,255,255,0.28)",
+              }}
+              title={speech.isListening ? "Aufnahme stoppen" : "Sprechen"}
             >
-              {speech.isListening ? (
-                <MicOff className="size-[18px]" />
-              ) : (
-                <Mic className="size-[18px]" />
+              <Mic className="size-[18px]" />
+              {/* recording dot */}
+              {speech.isListening && (
+                <motion.span
+                  className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-500"
+                  animate={{ opacity: [1, 0.2, 1] }}
+                  transition={{ duration: 0.9, repeat: Infinity }}
+                />
               )}
             </button>
           )}
