@@ -5,7 +5,9 @@ dist/
 *.log
 .DS_Store
 packages/brain/models/
-packages/brain/__pycache__/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
 packages/brain/.venv/
 packages/brain/data/uploads/
 *.gguf

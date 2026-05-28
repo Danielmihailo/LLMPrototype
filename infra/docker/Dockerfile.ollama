@@ -1,0 +1,13 @@
+FROM ollama/ollama:latest
+
+# Model to pull on first start (can be overridden via OLLAMA_MODEL env var)
+ENV OLLAMA_MODEL=llama3:8b
+ENV OLLAMA_HOST=0.0.0.0
+
+# Startup script: start Ollama, pull model if not cached, keep running
+COPY infra/scripts/ollama-start.sh /ollama-start.sh
+RUN chmod +x /ollama-start.sh
+
+EXPOSE 11434
+
+CMD ["/ollama-start.sh"]

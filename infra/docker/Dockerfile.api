@@ -1,15 +1,20 @@
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-COPY packages ./packages
-RUN npm ci && npm run build
+FROM node:20-slim
 
-FROM node:20-alpine
 WORKDIR /app
-COPY --from=build /app/packages/api/dist ./dist
-COPY --from=build /app/packages/api/package.json ./
-COPY --from=build /app/node_modules ./node_modules
-COPY packages/api/src/db/migrations ./dist/db/migrations
+
+# Build tools needed for argon2 native module
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/api/package.json ./packages/api/
+
+RUN npm install
+
+COPY packages/shared/ ./packages/shared/
+COPY packages/api/ ./packages/api/
+
 ENV API_PORT=3001
 EXPOSE 3001
-CMD ["node", "dist/server.js"]
+
+CMD ["npx", "tsx", "src/server.ts"]
