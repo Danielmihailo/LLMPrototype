@@ -25,4 +25,6 @@ export const config = {
       "read_fulfillments,write_fulfillments,read_shipping,write_shipping",
   },
   encryptionKey: process.env.ENCRYPTION_KEY ?? "0123456789abcdef0123456789abcdef",
+  // Optional: high-quality TTS via OpenAI (tts-1-hd). Falls back to Web Speech if not set.
+  openaiApiKey: process.env.OPENAI_API_KEY ?? "",
 };

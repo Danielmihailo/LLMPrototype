@@ -326,10 +326,11 @@ export function ChatPage() {
 
   const messagesRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const jarvisTextRef = useRef("");
-  // true when send was triggered by voice → always speak the response
-  const voiceInputRef = useRef(false);
+  const inputRef        = useRef<HTMLInputElement>(null);
+  const jarvisTextRef   = useRef("");
+  const voiceInputRef   = useRef(false);   // last send was voice → speak response
+  const convRef         = useRef(false);   // conversation mode active
+  const listenAgainRef  = useRef<() => void>(() => {}); // stable callback
 
   const speech = useSpeech("de-DE");
 
@@ -411,7 +412,13 @@ export function ChatPage() {
 
         // Speak if this message was sent via voice
         if (voiceInputRef.current && jarvisTextRef.current) {
-          speech.speak(jarvisTextRef.current, () => setOrbState("idle"));
+          await speech.speak(jarvisTextRef.current, () => {
+            setOrbState("idle");
+            // Conversation loop: auto-restart listening after JARVIS speaks
+            if (convRef.current) {
+              setTimeout(() => listenAgainRef.current(), 350);
+            }
+          });
         } else {
           setOrbState("idle");
         }
@@ -441,19 +448,36 @@ export function ChatPage() {
     }
   };
 
+  // Keep listenAgainRef always up to date so speak() callback can call it safely
+  const startListeningLoop = useCallback(() => {
+    if (!convRef.current) return;
+    speech.startListening(
+      (transcript) => {
+        voiceInputRef.current = true;
+        setInput(transcript);
+        void send(transcript);
+      },
+      () => {
+        // recognition ended without result (timeout/error)
+        if (convRef.current && !sending) setOrbState("idle");
+      },
+    );
+  }, [speech, send, sending]);
+
+  // Always keep the ref in sync so the speak callback can trigger it
+  listenAgainRef.current = startListeningLoop;
+
   const handleMic = () => {
-    if (speech.isListening) {
+    if (convRef.current || speech.isListening) {
+      // Stop conversation mode
+      convRef.current = false;
       speech.stopListening();
-      if (!sending) setOrbState("idle");
+      speech.stopSpeaking();
+      setOrbState("idle");
     } else {
-      speech.startListening(
-        (transcript) => {
-          voiceInputRef.current = true; // mark as voice → JARVIS will speak back
-          setInput(transcript);
-          void send(transcript);
-        },
-        () => { if (!sending) setOrbState("idle"); },
-      );
+      // Enter conversation mode
+      convRef.current = true;
+      startListeningLoop();
     }
   };
 
@@ -675,26 +699,25 @@ export function ChatPage() {
           className="flex items-center gap-2 max-w-2xl mx-auto"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.11)" }}
         >
-          {/* Mic — always Mic icon, never crossed-out */}
+          {/* Mic — always Mic icon. Purple + pulsing dot = conversation active */}
           {speech.supported && (
             <button
               onClick={handleMic}
-              disabled={sending}
               className="relative shrink-0 p-2 transition-colors"
               style={{
-                color: speech.isListening
-                  ? "rgba(167,139,250,1)"   // purple when active
+                color: (speech.isListening || speech.isSpeaking)
+                  ? "rgba(167,139,250,1)"
                   : "rgba(255,255,255,0.28)",
               }}
-              title={speech.isListening ? "Aufnahme stoppen" : "Sprechen"}
+              title={convRef.current ? "Gespräch beenden" : "Gespräch starten"}
             >
               <Mic className="size-[18px]" />
-              {/* recording dot */}
-              {speech.isListening && (
+              {/* pulsing dot = conversation mode on */}
+              {convRef.current && (
                 <motion.span
                   className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-500"
-                  animate={{ opacity: [1, 0.2, 1] }}
-                  transition={{ duration: 0.9, repeat: Infinity }}
+                  animate={{ opacity: [1, 0.15, 1] }}
+                  transition={{ duration: 0.85, repeat: Infinity }}
                 />
               )}
             </button>

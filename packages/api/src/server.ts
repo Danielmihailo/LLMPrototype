@@ -27,6 +27,7 @@ import {
   handleRollbackAction,
 } from "./actions/routes.js";
 import { handleUploadDoc, handleWebFetch } from "./knowledge/routes.js";
+import { handleTTS } from "./tts/routes.js";
 import {
   handleDeleteAccount,
   handleExportAccount,
@@ -160,6 +161,12 @@ async function handleRequest(
         await handleGetAction(actionId, res);
         return;
       }
+    }
+
+    if (path === "/v1/tts" && method === "POST" && userId) {
+      setCors(res, req.headers.origin);
+      await handleTTS(req, res);
+      return;
     }
 
     if (path === "/v1/knowledge/docs" && method === "POST" && userId) {
