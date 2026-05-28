@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info:
+  title: JARVIS Shop OS API
+  version: 1.0.0
+paths:
+  /v1/auth/register:
+    post:
+      summary: Register merchant account
+  /v1/auth/login:
+    post:
+      summary: Login
+  /v1/conversations/{id}/messages:
+    post:
+      summary: Send message (SSE stream)
+  /v1/actions/{id}/confirm:
+    post:
+      summary: Confirm planned shop action
+  /internal/brain/infer:
+    post:
+      summary: Brain inference (internal)

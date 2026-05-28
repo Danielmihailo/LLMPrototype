@@ -1,0 +1,36 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: jarvis
+          POSTGRES_PASSWORD: jarvis
+          POSTGRES_DB: jarvis
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run migrate
+        env:
+          DATABASE_URL: postgresql://jarvis:jarvis@localhost:5432/jarvis
+          SESSION_SECRET: ci-test-secret-minimum-32-characters
+      - run: pip install -r packages/brain/requirements.txt
+      - run: python -m pytest packages/brain/tests -q

@@ -1,0 +1,11 @@
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+WORKDIR /app
+RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
+COPY packages/brain/requirements.txt .
+RUN pip3 install --no-cache-dir fastapi uvicorn pydantic vllm
+COPY packages/brain ./packages/brain
+ENV PYTHONPATH=/app/packages/brain
+ENV BRAIN_BACKEND=vllm
+WORKDIR /app/packages/brain
+EXPOSE 8000
+CMD ["python3", "-m", "uvicorn", "jarvis.inference.server:app", "--host", "0.0.0.0", "--port", "8000"]

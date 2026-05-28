@@ -1,0 +1,20 @@
+{
+  "name": "jarvis",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @jarvis/api\" \"npm run dev -w @jarvis/frontend\" \"npm run dev -w @jarvis/brain\"",
+    "dev:api": "npm run dev -w @jarvis/api",
+    "dev:frontend": "npm run dev -w @jarvis/frontend",
+    "dev:brain": "npm run dev -w @jarvis/brain",
+    "build": "npm run build -w @jarvis/shared && npm run build -w @jarvis/api && npm run build -w @jarvis/frontend",
+    "migrate": "npm run migrate -w @jarvis/api",
+    "seed": "node scripts/seed-dev.js",
+    "lint": "npm run lint -w @jarvis/api && npm run lint -w @jarvis/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

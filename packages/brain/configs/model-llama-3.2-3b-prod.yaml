@@ -1,0 +1,4 @@
+base_model: meta-llama/Llama-3.2-3B-Instruct
+backend: vllm
+quantization: awq
+max_tokens: 1024

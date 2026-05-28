@@ -1,0 +1,11 @@
+{
+  "name": "@jarvis/brain",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "cross-env PYTHONPATH=. python -m uvicorn jarvis.inference.server:app --reload --host 0.0.0.0 --port 8000"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
+  }
+}

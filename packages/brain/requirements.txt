@@ -1,0 +1,14 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.10.0
+pyyaml>=6.0.2
+httpx>=0.28.0
+# Optional — install for local GGUF inference:
+# llama-cpp-python>=0.3.0
+# Optional — fine-tuning:
+# unsloth
+# transformers
+# peft
+# torch
+# Optional — embeddings:
+# sentence-transformers

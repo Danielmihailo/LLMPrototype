@@ -1,0 +1,10 @@
+{
+  "name": "jarvis-brain-vllm",
+  "image": "jarvis-brain-vllm:latest",
+  "gpu_type": "NVIDIA RTX A4000",
+  "env": {
+    "BRAIN_BACKEND": "vllm",
+    "VLLM_MODEL": "meta-llama/Llama-3.2-3B-Instruct"
+  },
+  "ports": "8000/http"
+}

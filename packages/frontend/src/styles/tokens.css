@@ -1,0 +1,27 @@
+:root {
+  --jarvis-bg: #030712;
+  --jarvis-surface: #0f172a;
+  --jarvis-accent: #22d3ee;
+  --jarvis-accent-dim: #0891b2;
+  --jarvis-text: #e2e8f0;
+  --jarvis-muted: #64748b;
+  --jarvis-glow: 0 0 24px rgba(34, 211, 238, 0.35);
+  --font-display: "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--jarvis-bg);
+  color: var(--jarvis-text);
+  font-family: var(--font-display);
+}
+
+#app {
+  height: 100%;
+}
