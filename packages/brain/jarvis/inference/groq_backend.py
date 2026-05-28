@@ -6,7 +6,7 @@ from typing import Generator
 
 import httpx
 
-from jarvis.inference.schema import InferResult
+from jarvis.prompts.output_schema import JarvisOutput, parse_output
 
 
 class GroqBackend:
@@ -17,14 +17,13 @@ class GroqBackend:
         self.model = os.environ.get("BRAIN_GROQ_MODEL", "llama3-8b-8192")
         self.base_url = "https://api.groq.com/openai/v1"
 
-    def _parse_result(self, content: str) -> InferResult:
+    def _parse_result(self, content: str) -> JarvisOutput:
         try:
-            data = json.loads(content)
-            return InferResult(**data)
+            return parse_output(content)
         except Exception:
-            return InferResult(response_text=content, actions=[], confidence=0.5)
+            return JarvisOutput(response_text=content.strip(), actions=[], confidence=0.5)
 
-    def infer(self, messages: list[dict]) -> InferResult:
+    def infer(self, messages: list[dict]) -> JarvisOutput:
         with httpx.Client(timeout=60) as client:
             resp = client.post(
                 f"{self.base_url}/chat/completions",
