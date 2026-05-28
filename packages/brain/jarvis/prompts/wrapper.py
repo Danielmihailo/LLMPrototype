@@ -49,10 +49,12 @@ def wrap_messages(
         if role == "jarvis":
             role = "assistant"
         out.append({"role": role, "content": m.get("content", "")})
-    out.append(
-        {
-            "role": "user",
-            "content": "Respond ONLY with valid JSON matching the output contract.",
-        }
-    )
+
+    # Ensure last message is from user (required by most LLM APIs).
+    # Append the JSON instruction to the last user message, or add a new one.
+    json_instruction = "Respond ONLY with valid JSON matching the output contract."
+    if out and out[-1]["role"] == "user":
+        out[-1]["content"] += f"\n\n{json_instruction}"
+    else:
+        out.append({"role": "user", "content": json_instruction})
     return out
