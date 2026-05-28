@@ -25,6 +25,8 @@ export const config = {
       "read_fulfillments,write_fulfillments,read_shipping,write_shipping",
   },
   encryptionKey: process.env.ENCRYPTION_KEY ?? "0123456789abcdef0123456789abcdef",
-  // Optional: high-quality TTS via OpenAI (tts-1-hd). Falls back to Web Speech if not set.
+  // Optional: high-quality TTS via OpenAI. Falls back to Web Speech if not set.
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+  // Groq API key — used for STT (Whisper) AND brain inference
+  groqApiKey: process.env.GROQ_API_KEY ?? "",
 };

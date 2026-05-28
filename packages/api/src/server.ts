@@ -28,6 +28,7 @@ import {
 } from "./actions/routes.js";
 import { handleUploadDoc, handleWebFetch } from "./knowledge/routes.js";
 import { handleTTS } from "./tts/routes.js";
+import { handleSTT } from "./stt/routes.js";
 import {
   handleDeleteAccount,
   handleExportAccount,
@@ -166,6 +167,11 @@ async function handleRequest(
     if (path === "/v1/tts" && method === "POST" && userId) {
       setCors(res, req.headers.origin);
       await handleTTS(req, res);
+      return;
+    }
+    if (path === "/v1/stt" && method === "POST" && userId) {
+      setCors(res, req.headers.origin);
+      await handleSTT(req, res);
       return;
     }
 

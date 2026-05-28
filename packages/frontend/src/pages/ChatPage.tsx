@@ -701,8 +701,10 @@ export function ChatPage() {
               ? "Mikrofon-Zugriff verweigert — bitte in den Browser-Einstellungen erlauben"
               : speech.micError === "not-supported"
               ? "Spracherkennung wird von diesem Browser nicht unterstützt"
-              : speech.micError === "network"
-              ? "Netzwerkfehler bei der Spracherkennung"
+              : speech.micError === "no-speech"
+              ? "Keine Sprache erkannt — bitte nochmal versuchen"
+              : speech.micError === "unknown"
+              ? "Fehler bei der Spracherkennung"
               : error}
           </p>
         )}
