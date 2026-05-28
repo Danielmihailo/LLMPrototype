@@ -16,4 +16,8 @@ def get_backend():
         from jarvis.inference.vllm_backend import VllmBackend
 
         return VllmBackend()
+    if backend == "groq":
+        from jarvis.inference.groq_backend import GroqBackend
+
+        return GroqBackend()
     return MockBackend()
