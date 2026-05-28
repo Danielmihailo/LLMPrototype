@@ -19,4 +19,8 @@ export default defineConfig({
   build: {
     outDir: "dist",
   },
+  optimizeDeps: {
+    include: ["three"],
+    exclude: ["@react-three/fiber", "@react-three/drei"],
+  },
 });
