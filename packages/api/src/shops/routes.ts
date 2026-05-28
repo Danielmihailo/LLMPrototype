@@ -3,6 +3,7 @@ import { URL } from "node:url";
 import { v4 as uuidv4 } from "uuid";
 import { query } from "../db/pool.js";
 import { encryptJson } from "../auth/session.js";
+import { config } from "../config.js";
 import * as shopifyOAuth from "../connectors/shopify/oauth.js";
 import * as shopifyProducts from "../connectors/shopify/products.js";
 import { createGreenfieldShop } from "../connectors/greenfield/runtime.js";
@@ -18,8 +19,15 @@ export async function handleListShops(
   res: ServerResponse,
 ): Promise<void> {
   const { rows } = await query(
-    `SELECT id, user_id, platform, external_shop_id, display_name, status, connected_at
-     FROM shop_connections WHERE user_id = $1 ORDER BY connected_at DESC`,
+    `SELECT id,
+            platform,
+            display_name  AS name,
+            external_shop_id AS domain,
+            status,
+            connected_at
+     FROM shop_connections
+     WHERE user_id = $1
+     ORDER BY connected_at DESC`,
     [userId],
   );
   res.writeHead(200, { "Content-Type": "application/json" });
@@ -79,8 +87,12 @@ export async function handleShopifyCallback(
   } catch {
     /* snapshot optional */
   }
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ shop_connection_id: id }));
+
+  // Redirect browser back to the frontend after successful OAuth.
+  // The frontend detects ?connected= and shows a success message.
+  const redirectUrl = `${config.frontendUrl}/shops?connected=${id}`;
+  res.writeHead(302, { Location: redirectUrl });
+  res.end();
 }
 
 export async function handleWordPressConnect(

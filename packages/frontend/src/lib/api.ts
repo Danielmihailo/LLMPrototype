@@ -28,6 +28,18 @@ export const api = {
 
   listShops: () => req<{ shops: Shop[] }>("/v1/shops"),
 
+  /** Returns the Shopify OAuth URL. Caller should redirect window.location. */
+  getShopifyOAuthUrl: (shop: string) =>
+    req<{ oauth_url: string }>(
+      `/v1/shops/connect/shopify/start?shop=${encodeURIComponent(shop)}`,
+    ),
+
+  connectWordPress: (siteUrl: string, username: string, appPassword: string) =>
+    req<{ shop_connection_id: string }>("/v1/shops/connect/wordpress", {
+      method: "POST",
+      body: JSON.stringify({ site_url: siteUrl, username, app_password: appPassword }),
+    }),
+
   createConversation: (shopConnectionId?: string) =>
     req<{ conversation_id: string }>("/v1/conversations", {
       method: "POST",

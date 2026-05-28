@@ -6,7 +6,8 @@ const pendingOAuth = new Map<string, { userId: string; shop: string }>();
 export function startOAuth(userId: string, shop: string): string {
   const state = randomBytes(16).toString("hex");
   pendingOAuth.set(state, { userId, shop });
-  const redirectUri = `${config.frontendUrl}/shops/shopify/callback`;
+  // Must match exactly what is registered in Shopify Partner App → Redirect URLs
+  const redirectUri = `${config.apiUrl}/v1/shops/shopify/callback`;
   const params = new URLSearchParams({
     client_id: config.shopify.apiKey,
     scope: config.shopify.scopes,

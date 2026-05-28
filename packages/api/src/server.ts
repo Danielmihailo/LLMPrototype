@@ -101,7 +101,12 @@ async function handleRequest(
       await handleShopifyStart(userId, url, res);
       return;
     }
-    if (path === "/v1/shops/connect/shopify/callback" && method === "GET") {
+    // Shopify redirects here after OAuth — path must match what's registered in Partner App
+    if (
+      (path === "/v1/shops/shopify/callback" ||
+        path === "/v1/shops/connect/shopify/callback") &&
+      method === "GET"
+    ) {
       setCors(res, req.headers.origin);
       await handleShopifyCallback(url, res);
       return;
