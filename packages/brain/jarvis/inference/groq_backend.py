@@ -14,7 +14,7 @@ class GroqBackend:
 
     def __init__(self) -> None:
         self.api_key = os.environ.get("GROQ_API_KEY", "")
-        self.model = os.environ.get("BRAIN_GROQ_MODEL", "llama3-8b-8192")
+        self.model = os.environ.get("BRAIN_GROQ_MODEL", "llama-3.1-8b-instant")
         self.base_url = "https://api.groq.com/openai/v1"
 
     def _parse_result(self, content: str) -> JarvisOutput:
@@ -43,6 +43,9 @@ class GroqBackend:
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json={"model": self.model, "messages": messages, "stream": True},
             ) as resp:
+                if resp.status_code >= 400:
+                    body = resp.read().decode()
+                    raise RuntimeError(f"Groq {resp.status_code}: {body}")
                 resp.raise_for_status()
                 for line in resp.iter_lines():
                     if not line.startswith("data: "):
