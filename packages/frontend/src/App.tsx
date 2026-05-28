@@ -1,40 +1,37 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { RadarBackground } from "@/components/layout/RadarBackground";
-import { Navbar } from "@/components/layout/Navbar";
-import { HomePage } from "@/pages/HomePage";
+import { useAppState } from "@/store/state";
 import { LoginPage } from "@/pages/LoginPage";
 import { ChatPage } from "@/pages/ChatPage";
-import { ShopsPage } from "@/pages/ShopsPage";
-import { useAppState } from "@/store/state";
-
-const pageVariants = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
-};
 
 export default function App() {
   const { state } = useAppState();
 
   return (
-    <div className="relative min-h-screen bg-[#030712] overflow-x-hidden">
-      <RadarBackground />
-      <Navbar />
-
+    <div className="w-screen h-screen bg-black overflow-hidden">
       <AnimatePresence mode="wait">
-        <motion.main
-          key={state.currentPage}
-          variants={pageVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={{ duration: 0.25, ease: "easeOut" }}
-        >
-          {state.currentPage === "home" && <HomePage />}
-          {state.currentPage === "login" && <LoginPage />}
-          {state.currentPage === "chat" && <ChatPage />}
-          {state.currentPage === "shops" && <ShopsPage />}
-        </motion.main>
+        {!state.userId ? (
+          <motion.div
+            key="login"
+            className="w-full h-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <LoginPage />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="chat"
+            className="w-full h-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ChatPage />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

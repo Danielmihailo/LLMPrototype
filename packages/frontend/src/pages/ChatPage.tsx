@@ -1,19 +1,26 @@
-import { useState, useEffect, useRef, Suspense, lazy, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  Suspense,
+  lazy,
+  useCallback,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
-  User,
-  CheckCircle,
-  XCircle,
   Loader2,
   Mic,
   MicOff,
   Volume2,
   VolumeX,
+  Store,
+  X,
+  ChevronRight,
+  LogOut,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
-import { GlassCard } from "@/components/ui/glass-card";
-import { GradientButton } from "@/components/ui/gradient-button";
-import { NeonBadge } from "@/components/ui/neon-badge";
 import { useAppState } from "@/store/state";
 import { api, streamMessage, type Action } from "@/lib/api";
 import { useSpeech } from "@/hooks/useSpeech";
@@ -36,88 +43,229 @@ interface ActionState {
   actionId: string | null;
 }
 
-/* ── sound wave (TTS indicator) ─────────────────────────────────────── */
-function SoundWave() {
+/* ── streaming cursor ────────────────────────────────────────────────── */
+function Cursor() {
   return (
-    <div className="flex items-end gap-[3px] h-4 ml-1">
-      {[0.4, 0.9, 0.6, 1.0, 0.7, 0.5, 0.85].map((h, i) => (
-        <motion.div
-          key={i}
-          className="w-[3px] bg-cyan-400 rounded-full"
-          animate={{ scaleY: [h * 0.3, h, h * 0.3] }}
-          transition={{ duration: 0.6 + i * 0.05, repeat: Infinity, delay: i * 0.07, ease: "easeInOut" }}
-          style={{ originY: 1, height: "16px" }}
-        />
-      ))}
-    </div>
+    <motion.span
+      className="inline-block w-[2px] h-[0.85em] bg-cyan-400/80 ml-[2px] align-middle rounded-sm"
+      animate={{ opacity: [1, 0] }}
+      transition={{ duration: 0.55, repeat: Infinity }}
+    />
   );
 }
 
-/* ── streaming dots ──────────────────────────────────────────────────── */
-function StreamingDots() {
-  return (
-    <div className="flex items-center gap-1.5 px-1 py-0.5">
-      {[0, 1, 2].map((i) => (
-        <motion.div
-          key={i}
-          className="size-1.5 rounded-full bg-cyan-400"
-          animate={{ opacity: [0.2, 1, 0.2], scale: [0.7, 1.3, 0.7] }}
-          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.22 }}
-        />
-      ))}
-    </div>
-  );
-}
+/* ── shop connect bottom sheet ──────────────────────────────────────── */
+function ShopModal({ onClose }: { onClose: () => void }) {
+  const [platform, setPlatform] = useState<"shopify" | "wordpress" | null>(null);
+  const [shopDomain, setShopDomain] = useState("");
+  const [wpUrl, setWpUrl] = useState("");
+  const [wpUser, setWpUser] = useState("");
+  const [wpPass, setWpPass] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-/* ── message bubble ──────────────────────────────────────────────────── */
-function MessageBubble({ msg, speaking }: { msg: ChatMessage; speaking: boolean }) {
-  const isUser = msg.role === "user";
+  const connectShopify = async () => {
+    const raw = shopDomain.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const domain = raw.includes(".myshopify.com") ? raw : `${raw}.myshopify.com`;
+    setLoading(true);
+    try {
+      const { oauth_url } = await api.getShopifyOAuthUrl(domain);
+      window.location.href = oauth_url;
+    } catch (err) {
+      setError(String(err).replace("Error: ", ""));
+      setLoading(false);
+    }
+  };
+
+  const connectWordPress = async () => {
+    setLoading(true);
+    try {
+      await api.connectWordPress(wpUrl.trim(), wpUser.trim(), wpPass.trim());
+      onClose();
+    } catch (err) {
+      setError(String(err).replace("Error: ", ""));
+      setLoading(false);
+    }
+  };
+
+  const lineStyle = { borderBottom: "1px solid rgba(255,255,255,0.09)" };
+  const inputClass =
+    "w-full bg-transparent text-white text-sm placeholder:text-white/20 outline-none py-2.5 transition-colors duration-200";
+
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 14, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className={`flex items-end gap-2.5 ${isUser ? "flex-row-reverse" : "flex-row"}`}
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{ backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.55)" }}
+      onClick={onClose}
     >
-      <div
-        className={`shrink-0 size-7 rounded-full flex items-center justify-center border ${
-          isUser
-            ? "bg-cyan-500/20 border-cyan-500/30"
-            : "bg-white/5 border-white/10"
-        }`}
+      <motion.div
+        className="w-full max-w-lg bg-[#050505] px-6 pt-5 pb-10"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 320 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{ borderTop: "1px solid rgba(255,255,255,0.07)", borderRadius: "20px 20px 0 0" }}
       >
-        {isUser ? (
-          <User className="size-3.5 text-cyan-400" />
-        ) : (
-          <div
-            className="size-2.5 rounded-full bg-cyan-400"
-            style={{ boxShadow: "0 0 6px rgba(34,211,238,0.8)" }}
-          />
-        )}
-      </div>
+        {/* drag handle */}
+        <div className="w-9 h-[3px] bg-white/15 rounded-full mx-auto mb-6" />
 
-      <div
-        className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser
-            ? "bg-cyan-500/12 border border-cyan-500/25 text-slate-200 rounded-br-sm"
-            : "bg-white/[0.04] border border-white/[0.08] text-slate-300 rounded-bl-sm"
-        }`}
-      >
-        {msg.streaming && !msg.content ? (
-          <StreamingDots />
-        ) : (
-          <span>{msg.content}</span>
-        )}
-        {msg.streaming && msg.content && (
-          <motion.span
-            className="inline-block w-0.5 h-[1em] bg-cyan-400 ml-0.5 align-middle"
-            animate={{ opacity: [1, 0] }}
-            transition={{ duration: 0.55, repeat: Infinity }}
-          />
-        )}
-        {!isUser && !msg.streaming && speaking && <SoundWave />}
-      </div>
+        <div className="flex items-center justify-between mb-7">
+          <h2
+            className="text-white/80 font-semibold text-sm tracking-wide"
+            style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}
+          >
+            Shop verbinden
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-white/25 hover:text-white/60 transition-colors p-1"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {!platform && (
+            <motion.div
+              key="picker"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              className="space-y-1"
+            >
+              {(
+                [
+                  { id: "shopify" as const, name: "Shopify", sub: "OAuth — sicher & in 30 Sekunden" },
+                  { id: "wordpress" as const, name: "WordPress / WooCommerce", sub: "Über Application Password" },
+                ] as const
+              ).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => { setPlatform(p.id); setError(""); }}
+                  className="w-full flex items-center justify-between py-4 text-left group transition-colors hover:bg-white/[0.025] px-1 rounded-lg"
+                >
+                  <div>
+                    <div className="text-white/75 text-sm font-medium">{p.name}</div>
+                    <div className="text-white/30 text-xs mt-0.5">{p.sub}</div>
+                  </div>
+                  <ChevronRight className="size-4 text-white/20 group-hover:text-cyan-400/60 transition-colors" />
+                </button>
+              ))}
+            </motion.div>
+          )}
+
+          {platform === "shopify" && (
+            <motion.div
+              key="shopify"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              className="space-y-6"
+            >
+              <button
+                onClick={() => { setPlatform(null); setError(""); }}
+                className="text-white/30 text-xs hover:text-white/60 transition-colors"
+              >
+                ← Zurück
+              </button>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-white/30 tracking-[0.2em] uppercase">
+                  Shop-Domain
+                </label>
+                <input
+                  type="text"
+                  value={shopDomain}
+                  onChange={(e) => setShopDomain(e.target.value)}
+                  placeholder="meinshop.myshopify.com"
+                  autoFocus
+                  className={inputClass}
+                  style={lineStyle}
+                  onFocus={(e) =>
+                    (e.currentTarget.style.borderBottom = "1px solid rgba(34,211,238,0.45)")
+                  }
+                  onBlur={(e) =>
+                    (e.currentTarget.style.borderBottom = "1px solid rgba(255,255,255,0.09)")
+                  }
+                />
+              </div>
+              {error && <p className="text-rose-400/70 text-xs">{error}</p>}
+              <button
+                onClick={connectShopify}
+                disabled={loading || !shopDomain.trim()}
+                className="w-full py-3 text-sm text-cyan-400/80 hover:text-white disabled:opacity-30 transition-colors"
+                style={{ borderBottom: "1px solid rgba(34,211,238,0.22)" }}
+              >
+                {loading ? (
+                  <Loader2 className="size-4 animate-spin mx-auto" />
+                ) : (
+                  "Mit Shopify verbinden →"
+                )}
+              </button>
+            </motion.div>
+          )}
+
+          {platform === "wordpress" && (
+            <motion.div
+              key="wordpress"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              className="space-y-5"
+            >
+              <button
+                onClick={() => { setPlatform(null); setError(""); }}
+                className="text-white/30 text-xs hover:text-white/60 transition-colors"
+              >
+                ← Zurück
+              </button>
+              {(
+                [
+                  { label: "Website URL", val: wpUrl, set: setWpUrl, ph: "https://meinshop.de", type: "url" },
+                  { label: "Benutzername", val: wpUser, set: setWpUser, ph: "admin", type: "text" },
+                  { label: "Application Password", val: wpPass, set: setWpPass, ph: "xxxx xxxx xxxx xxxx", type: "password" },
+                ] as const
+              ).map((f) => (
+                <div key={f.label} className="space-y-1.5">
+                  <label className="text-[10px] text-white/30 tracking-[0.2em] uppercase">
+                    {f.label}
+                  </label>
+                  <input
+                    type={f.type}
+                    value={f.val}
+                    onChange={(e) => f.set(e.target.value)}
+                    placeholder={f.ph}
+                    className={inputClass}
+                    style={lineStyle}
+                    onFocus={(e) =>
+                      (e.currentTarget.style.borderBottom = "1px solid rgba(34,211,238,0.45)")
+                    }
+                    onBlur={(e) =>
+                      (e.currentTarget.style.borderBottom = "1px solid rgba(255,255,255,0.09)")
+                    }
+                  />
+                </div>
+              ))}
+              {error && <p className="text-rose-400/70 text-xs">{error}</p>}
+              <button
+                onClick={connectWordPress}
+                disabled={loading || !wpUrl.trim() || !wpUser.trim() || !wpPass.trim()}
+                className="w-full py-3 text-sm text-cyan-400/80 hover:text-white disabled:opacity-30 transition-colors"
+                style={{ borderBottom: "1px solid rgba(34,211,238,0.22)" }}
+              >
+                {loading ? (
+                  <Loader2 className="size-4 animate-spin mx-auto" />
+                ) : (
+                  "WordPress verbinden →"
+                )}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </motion.div>
   );
 }
@@ -125,44 +273,43 @@ function MessageBubble({ msg, speaking }: { msg: ChatMessage; speaking: boolean 
 /* ── main ChatPage ───────────────────────────────────────────────────── */
 export function ChatPage() {
   const { state, dispatch } = useAppState();
-  const [messages, setMessages]       = useState<ChatMessage[]>([]);
-  const [input, setInput]             = useState("");
-  const [sending, setSending]         = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
   const [actionState, setActionState] = useState<ActionState | null>(null);
-  const [error, setError]             = useState("");
+  const [error, setError] = useState("");
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [orbState, setOrbState]       = useState<OrbState>("idle");
+  const [orbState, setOrbState] = useState<OrbState>("idle");
+  const [shopModal, setShopModal] = useState(false);
 
-  const bottomRef     = useRef<HTMLDivElement>(null);
-  const inputRef      = useRef<HTMLInputElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const jarvisTextRef = useRef("");
 
   const speech = useSpeech("de-DE");
 
-  /* auth guard + conversation init */
+  /* conversation init */
   useEffect(() => {
-    if (!state.userId) {
-      dispatch({ type: "NAVIGATE", payload: "login" });
-      return;
-    }
     if (!state.conversationId) {
       api
         .createConversation()
         .then(({ conversation_id }) =>
           dispatch({ type: "SET_CONVERSATION", payload: conversation_id }),
         )
-        .catch(() => setError("Konnte Konversation nicht erstellen"));
+        .catch(() => setError("Konnte Konversation nicht starten"));
     }
-  }, [state.userId, state.conversationId, dispatch]);
+  }, [state.conversationId, dispatch]);
 
+  /* auto-scroll */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  /* sync orb with speech state */
+  /* sync orb with speech */
   useEffect(() => {
-    if (speech.isListening)      setOrbState("listening");
-    else if (speech.isSpeaking)  setOrbState("speaking");
+    if (speech.isListening) setOrbState("listening");
+    else if (speech.isSpeaking) setOrbState("speaking");
   }, [speech.isListening, speech.isSpeaking]);
 
   /* send */
@@ -178,8 +325,17 @@ export function ChatPage() {
       setOrbState("thinking");
       jarvisTextRef.current = "";
 
-      const userMsg: ChatMessage   = { id: crypto.randomUUID(), role: "user",   content: text };
-      const jarvisMsg: ChatMessage = { id: crypto.randomUUID(), role: "jarvis", content: "", streaming: true };
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: text,
+      };
+      const jarvisMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "jarvis",
+        content: "",
+        streaming: true,
+      };
       setMessages((prev) => [...prev, userMsg, jarvisMsg]);
 
       try {
@@ -191,14 +347,18 @@ export function ChatPage() {
             setOrbState("speaking");
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === jarvisMsg.id ? { ...m, content: m.content + token } : m,
+                m.id === jarvisMsg.id
+                  ? { ...m, content: m.content + token }
+                  : m,
               ),
             );
           },
         );
 
         setMessages((prev) =>
-          prev.map((m) => (m.id === jarvisMsg.id ? { ...m, streaming: false } : m)),
+          prev.map((m) =>
+            m.id === jarvisMsg.id ? { ...m, streaming: false } : m,
+          ),
         );
 
         if (result.actions.length > 0) {
@@ -214,7 +374,7 @@ export function ChatPage() {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === jarvisMsg.id
-              ? { ...m, content: "⚠ Fehler: " + String(err), streaming: false }
+              ? { ...m, content: "⚠ " + String(err), streaming: false }
               : m,
           ),
         );
@@ -234,17 +394,6 @@ export function ChatPage() {
     }
   };
 
-  const handleConfirm = async () => {
-    if (!actionState?.actionId) return;
-    await api.confirmAction(actionState.actionId).catch(() => {});
-    setActionState(null);
-  };
-  const handleRollback = async () => {
-    if (!actionState?.actionId) return;
-    await api.rollbackAction(actionState.actionId).catch(() => {});
-    setActionState(null);
-  };
-
   const handleMic = () => {
     if (speech.isListening) {
       speech.stopListening();
@@ -260,261 +409,320 @@ export function ChatPage() {
     }
   };
 
+  const handleLogout = async () => {
+    await api.logout().catch(() => {});
+    dispatch({ type: "SET_USER", payload: null });
+    dispatch({ type: "SET_CONVERSATION", payload: null });
+  };
+
+  const handleConfirm = async () => {
+    if (!actionState?.actionId) return;
+    await api.confirmAction(actionState.actionId).catch(() => {});
+    setActionState(null);
+  };
+  const handleRollback = async () => {
+    if (!actionState?.actionId) return;
+    await api.rollbackAction(actionState.actionId).catch(() => {});
+    setActionState(null);
+  };
+
   const orbLabel = {
-    idle: "Bereit", listening: "Hört zu…", thinking: "Denkt…", speaking: "Spricht…",
+    idle: "Bereit",
+    listening: "Hört zu …",
+    thinking: "Denkt …",
+    speaking: "Spricht …",
   }[orbState];
 
-  const orbBadgeColor: "cyan" | "purple" | "orange" = {
-    idle: "cyan", listening: "purple", thinking: "orange", speaking: "cyan",
-  }[orbState] as "cyan" | "purple" | "orange";
+  const suggestions = ["Zeig meine Produkte", "Erstelle einen Rabatt", "Was läuft heute gut?"];
 
   /* ── render ──────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen flex flex-col pt-16 px-4 pb-4">
-      <div className="flex-1 max-w-3xl mx-auto w-full flex flex-col gap-3">
+    <div className="relative w-full h-full bg-black overflow-hidden">
 
-        {/* 3D orb card */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <GlassCard intensity="light" hover="none" padding="none" className="overflow-hidden">
-            <div className="relative h-[240px] sm:h-[300px] w-full">
-              <Suspense
-                fallback={
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="size-20 rounded-full border border-cyan-500/20 animate-pulse bg-cyan-500/5" />
-                  </div>
-                }
-              >
-                <ChatOrb orbState={orbState} className="w-full h-full" />
-              </Suspense>
+      {/* ── FULL-SCREEN ORB ── */}
+      <div className="absolute inset-0 z-0">
+        <Suspense fallback={null}>
+          <ChatOrb orbState={orbState} className="w-full h-full" />
+        </Suspense>
+      </div>
 
-              {/* bloom */}
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  className="size-40 rounded-full blur-2xl"
-                  animate={{
-                    opacity: orbState === "idle" ? 0.15 : 0.3,
-                    background: orbState === "listening"
-                      ? "radial-gradient(circle, #818cf8 0%, transparent 70%)"
-                      : orbState === "thinking"
-                      ? "radial-gradient(circle, #f59e0b 0%, transparent 70%)"
-                      : "radial-gradient(circle, #22d3ee 0%, transparent 70%)",
-                  }}
-                  transition={{ duration: 0.8 }}
-                />
-              </div>
+      {/* ── TOP BAR ── */}
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between px-5 pt-6 pointer-events-none">
+        {/* logout */}
+        <button
+          onClick={handleLogout}
+          className="pointer-events-auto text-white/15 hover:text-white/45 transition-colors p-1.5"
+          title="Ausloggen"
+        >
+          <LogOut className="size-4" />
+        </button>
 
-              {/* state badge */}
-              <div className="absolute top-3 left-0 right-0 flex justify-center pointer-events-none">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={orbState}
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <NeonBadge color={orbBadgeColor} pulse={orbState !== "idle"}>
-                      {orbLabel}
-                    </NeonBadge>
-                  </motion.div>
-                </AnimatePresence>
+        {/* center wordmark + state */}
+        <div className="flex flex-col items-center gap-1">
+          <span
+            className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-medium"
+            style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}
+          >
+            JARVIS
+          </span>
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={orbState}
+              initial={{ opacity: 0, y: 3 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -3 }}
+              transition={{ duration: 0.18 }}
+              className="text-[10px] text-cyan-400/55 tracking-wide"
+            >
+              {orbLabel}
+            </motion.span>
+          </AnimatePresence>
+        </div>
+
+        {/* voice toggle */}
+        <button
+          onClick={() => {
+            if (voiceEnabled) { speech.stopSpeaking(); setOrbState("idle"); }
+            setVoiceEnabled((v) => !v);
+          }}
+          className="pointer-events-auto transition-colors p-1.5"
+          style={{ color: voiceEnabled ? "rgba(34,211,238,0.55)" : "rgba(255,255,255,0.15)" }}
+          title={voiceEnabled ? "Stimme deaktivieren" : "Stimme aktivieren"}
+        >
+          {voiceEnabled ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+        </button>
+      </div>
+
+      {/* ── ACTION CONFIRM BAR ── */}
+      <AnimatePresence>
+        {actionState && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="absolute top-20 left-0 right-0 z-10 flex justify-center px-5"
+          >
+            <div
+              className="flex items-center gap-4 px-4 py-3 rounded-xl"
+              style={{
+                background: "rgba(10,10,10,0.85)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                backdropFilter: "blur(12px)",
+              }}
+            >
+              <span className="text-white/50 text-xs">
+                {actionState.actions.length} Aktion{actionState.actions.length !== 1 ? "en" : ""} ausstehend
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleConfirm}
+                  className="flex items-center gap-1.5 text-xs text-emerald-400/80 hover:text-emerald-300 transition-colors"
+                >
+                  <CheckCircle className="size-3.5" /> Bestätigen
+                </button>
+                <button
+                  onClick={handleRollback}
+                  className="flex items-center gap-1.5 text-xs text-rose-400/80 hover:text-rose-300 transition-colors"
+                >
+                  <XCircle className="size-3.5" /> Abbrechen
+                </button>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* info bar */}
-            <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white">JARVIS</span>
-                <NeonBadge color="cyan" pulse className="text-[9px] px-1.5 py-0.5">Live</NeonBadge>
-                <span className="text-xs text-slate-600 hidden sm:block">Shop OS · Groq llama-3.1-8b</span>
+      {/* ── MESSAGES OVERLAY ── */}
+      <div
+        className="absolute bottom-[72px] left-0 right-0 z-10"
+        style={{
+          height: "45vh",
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.45) 55%, transparent 100%)",
+        }}
+      >
+        <div
+          ref={messagesRef}
+          className="h-full overflow-y-auto px-5 sm:px-8 pb-3 pt-8 flex flex-col gap-2.5 scrollbar-hide"
+          style={{ maxWidth: "680px", margin: "0 auto" }}
+        >
+          {/* empty state suggestions */}
+          {messages.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="flex flex-col items-center gap-4 mt-auto mb-4"
+            >
+              <p className="text-white/18 text-sm text-center">Wie kann ich helfen?</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => { setInput(s); inputRef.current?.focus(); }}
+                    className="px-3.5 py-1.5 text-xs text-white/30 hover:text-white/60 rounded-full transition-colors"
+                    style={{ border: "1px solid rgba(255,255,255,0.07)" }}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
-              <button
-                onClick={() => {
-                  if (voiceEnabled) { speech.stopSpeaking(); setOrbState("idle"); }
-                  setVoiceEnabled((v) => !v);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
-                  voiceEnabled
-                    ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-400"
-                    : "bg-white/5 border-white/10 text-slate-500 hover:text-slate-300"
+            </motion.div>
+          )}
+
+          {/* message list */}
+          <AnimatePresence initial={false}>
+            {messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className={`flex ${
+                  msg.role === "user"
+                    ? "justify-end"
+                    : "justify-start items-start gap-2"
                 }`}
               >
-                {voiceEnabled ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
-                <span className="hidden sm:block">{voiceEnabled ? "Stimme an" : "Stumm"}</span>
-              </button>
-            </div>
-          </GlassCard>
-        </motion.div>
-
-        {/* messages */}
-        <GlassCard
-          intensity="light"
-          hover="none"
-          padding="none"
-          className="flex-1 flex flex-col min-h-[200px] max-h-[calc(100vh-520px)] overflow-hidden"
-        >
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="flex flex-col items-center justify-center h-full gap-3 py-6"
-              >
-                <p className="text-slate-600 text-sm">Wie kann ich dir helfen?</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {["Zeig meine Produkte", "Erstelle einen Rabatt", "Was läuft heute gut?"].map(
-                    (s) => (
-                      <button
-                        key={s}
-                        onClick={() => { setInput(s); inputRef.current?.focus(); }}
-                        className="px-3 py-1.5 text-xs rounded-lg glass text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition-all duration-200"
-                      >
-                        {s}
-                      </button>
-                    ),
-                  )}
-                </div>
-              </motion.div>
-            )}
-
-            <AnimatePresence>
-              {messages.map((msg) => (
-                <MessageBubble
-                  key={msg.id}
-                  msg={msg}
-                  speaking={speech.isSpeaking && msg.role === "jarvis" && !msg.streaming}
-                />
-              ))}
-            </AnimatePresence>
-
-            <AnimatePresence>
-              {actionState && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                >
-                  <GlassCard intensity="medium" hover="none" padding="sm" className="border-cyan-500/25">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-slate-300">Geplante Aktionen</span>
-                      <NeonBadge color="orange">
-                        {actionState.actions.length} Aktion{actionState.actions.length !== 1 ? "en" : ""}
-                      </NeonBadge>
-                    </div>
-                    <div className="space-y-1.5 mb-3">
-                      {actionState.actions.map((a, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs text-slate-400">
-                          <div className="size-1.5 rounded-full bg-cyan-400/60" />
-                          <span className="font-mono">{a.type}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleConfirm}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-all"
-                      >
-                        <CheckCircle className="size-3.5" /> Bestätigen
-                      </button>
-                      <button
-                        onClick={handleRollback}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-all"
-                      >
-                        <XCircle className="size-3.5" /> Abbrechen
-                      </button>
-                    </div>
-                  </GlassCard>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <div ref={bottomRef} />
-          </div>
-
-          {/* input bar */}
-          <div className="border-t border-white/5 p-3">
-            {error && (
-              <div className="mb-2 px-3 py-2 text-xs text-rose-400 bg-rose-500/10 rounded-lg border border-rose-500/20">
-                {error}
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              {speech.supported && (
-                <motion.button
-                  onClick={handleMic}
-                  disabled={sending}
-                  whileTap={{ scale: 0.88 }}
-                  className={`relative shrink-0 size-10 rounded-xl flex items-center justify-center border transition-all duration-200 ${
-                    speech.isListening
-                      ? "bg-purple-500/20 border-purple-500/50 text-purple-400"
-                      : "bg-white/5 border-white/10 text-slate-500 hover:text-cyan-400 hover:border-cyan-500/30"
+                {msg.role === "jarvis" && (
+                  <div
+                    className="size-[6px] rounded-full bg-cyan-400/60 shrink-0 mt-[8px]"
+                    style={{ boxShadow: "0 0 6px rgba(34,211,238,0.4)" }}
+                  />
+                )}
+                <p
+                  className={`text-sm leading-relaxed max-w-[76%] ${
+                    msg.role === "user"
+                      ? "text-white/60 text-right"
+                      : "text-cyan-50/75"
                   }`}
                 >
-                  {speech.isListening ? (
-                    <MicOff className="size-4" />
+                  {msg.streaming && !msg.content ? (
+                    <motion.span
+                      animate={{ opacity: [0.3, 0.7, 0.3] }}
+                      transition={{ duration: 1.2, repeat: Infinity }}
+                      className="text-cyan-400/50"
+                    >
+                      …
+                    </motion.span>
                   ) : (
-                    <Mic className="size-4" />
+                    msg.content
                   )}
-                  {speech.isListening && (
-                    <motion.div
-                      className="absolute inset-0 rounded-xl border border-purple-400/50"
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0, 0.7] }}
-                      transition={{ duration: 1.3, repeat: Infinity }}
-                    />
-                  )}
-                </motion.button>
-              )}
+                  {msg.streaming && msg.content && <Cursor />}
+                </p>
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={speech.isListening ? "Hört zu…" : "Sprich mit JARVIS…"}
-                disabled={sending || !state.conversationId || speech.isListening}
-                className="flex-1 h-10 px-4 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/40 focus:bg-cyan-500/5 transition-all duration-200 disabled:opacity-50"
-              />
-
-              <GradientButton
-                gradient="cyan"
-                size="md"
-                className="px-4 shrink-0"
-                onClick={() => void send()}
-                disabled={sending || !input.trim() || !state.conversationId}
-              >
-                {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-              </GradientButton>
-            </div>
-
-            {/* listening waveform */}
-            <AnimatePresence>
-              {speech.isListening && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-2 flex items-center gap-[3px] justify-center overflow-hidden"
-                >
-                  {Array.from({ length: 22 }).map((_, i) => (
-                    <motion.div
-                      key={i}
-                      className="w-[3px] rounded-full bg-purple-400"
-                      animate={{ scaleY: [0.15, Math.random() * 0.85 + 0.15, 0.15] }}
-                      transition={{
-                        duration: 0.45 + Math.random() * 0.35,
-                        repeat: Infinity,
-                        delay: i * 0.035,
-                        ease: "easeInOut",
-                      }}
-                      style={{ height: "20px", originY: 0.5 }}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </GlassCard>
+          <div ref={bottomRef} />
+        </div>
       </div>
+
+      {/* ── INPUT BAR ── */}
+      <div
+        className="absolute bottom-0 left-0 right-0 z-20 px-4 sm:px-6 pb-5 pt-2"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%)",
+        }}
+      >
+        {error && (
+          <p className="text-rose-400/60 text-xs text-center mb-2">{error}</p>
+        )}
+
+        <div
+          className="flex items-center gap-2 max-w-2xl mx-auto"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.11)" }}
+        >
+          {/* Mic */}
+          {speech.supported && (
+            <button
+              onClick={handleMic}
+              disabled={sending}
+              className={`shrink-0 p-2 transition-colors ${
+                speech.isListening
+                  ? "text-purple-400/90"
+                  : "text-white/25 hover:text-white/55"
+              }`}
+            >
+              {speech.isListening ? (
+                <MicOff className="size-[18px]" />
+              ) : (
+                <Mic className="size-[18px]" />
+              )}
+            </button>
+          )}
+
+          {/* Text input */}
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={speech.isListening ? "Hört zu …" : "Sprich mit JARVIS …"}
+            disabled={sending || !state.conversationId || speech.isListening}
+            autoComplete="off"
+            className="flex-1 bg-transparent text-white text-sm placeholder:text-white/22 outline-none py-3 disabled:opacity-40"
+          />
+
+          {/* Shop button */}
+          <button
+            onClick={() => setShopModal(true)}
+            title="Shop verbinden"
+            className="shrink-0 p-2 text-white/22 hover:text-white/55 transition-colors"
+          >
+            <Store className="size-4" />
+          </button>
+
+          {/* Send */}
+          <button
+            onClick={() => void send()}
+            disabled={sending || !input.trim() || !state.conversationId}
+            className="shrink-0 p-2 text-white/30 hover:text-cyan-400/80 disabled:opacity-20 transition-colors"
+          >
+            {sending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Send className="size-4" />
+            )}
+          </button>
+        </div>
+
+        {/* Listening waveform */}
+        <AnimatePresence>
+          {speech.isListening && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-2 flex items-center gap-[2px] justify-center overflow-hidden"
+            >
+              {Array.from({ length: 32 }).map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="w-[2px] rounded-full bg-purple-400/50"
+                  animate={{
+                    scaleY: [0.08, Math.random() * 0.9 + 0.1, 0.08],
+                  }}
+                  transition={{
+                    duration: 0.38 + Math.random() * 0.28,
+                    repeat: Infinity,
+                    delay: i * 0.022,
+                    ease: "easeInOut",
+                  }}
+                  style={{ height: "14px", originY: 0.5 }}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── SHOP MODAL ── */}
+      <AnimatePresence>
+        {shopModal && <ShopModal onClose={() => setShopModal(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
