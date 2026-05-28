@@ -24,7 +24,7 @@ const neonBadgeVariants = cva(
 );
 
 export interface NeonBadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
+  extends Omit<React.HTMLAttributes<HTMLSpanElement>, "color">,
     VariantProps<typeof neonBadgeVariants> {}
 
 const NeonBadge = React.forwardRef<HTMLSpanElement, NeonBadgeProps>(
