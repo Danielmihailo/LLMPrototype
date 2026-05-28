@@ -2,29 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Keyframes ─────────────────────────────────────────────────────────── */
+@keyframes ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1);    }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* ── Utilities ─────────────────────────────────────────────────────────── */
 @layer utilities {
   .scrollbar-hide {
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* Spinning SVG ring helper */
+  .logo-ring-spin {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ring-spin 28s linear infinite;
+  }
+  .logo-ring-spin-rev {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ring-spin 18s linear infinite reverse;
   }
 }
 
+/* ── Base ──────────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --jarvis-cyan: #22d3ee;
-    --jarvis-cyan-glow: rgba(34, 211, 238, 0.35);
-    --jarvis-bg: #000000;
+    --c: 34, 211, 238;           /* cyan RGB components        */
+    --cyan:       rgba(var(--c), 1);
+    --cyan-60:    rgba(var(--c), 0.6);
+    --cyan-30:    rgba(var(--c), 0.3);
+    --cyan-glow:  rgba(var(--c), 0.22);
+    --surface:    rgba(255,255,255,0.028);
+    --border:     rgba(255,255,255,0.072);
+    --border-dim: rgba(255,255,255,0.042);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body, #root {
-    height: 100%;
-    scroll-behavior: smooth;
-  }
+  html, body, #root { height: 100%; }
 
   body {
     background: #000;
@@ -34,13 +64,26 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* ── Chrome autofill: keep transparent dark background ── */
+  /* Film grain — adds depth, makes it feel real */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-size: 220px 220px;
+    opacity: 0.036;
+    mix-blend-mode: overlay;
+  }
+
+  /* Chrome autofill */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
     -webkit-box-shadow: 0 0 0 1000px #000 inset !important;
-    -webkit-text-fill-color: rgba(255, 255, 255, 0.85) !important;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.88) !important;
     caret-color: white;
     transition: background-color 9999s ease-in-out 0s;
   }
@@ -49,65 +92,105 @@
     font-family: 'Space Grotesk', system-ui, sans-serif;
   }
 
-  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar { width: 2px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(34, 211, 238, 0.25);
-    border-radius: 2px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(34, 211, 238, 0.45);
-  }
+  ::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.18); border-radius: 2px; }
 }
 
+/* ── Components ────────────────────────────────────────────────────────── */
 @layer components {
-  /* Login page underline inputs */
+
+  /* HUD / monospace labels */
+  .hud {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  /* Login underline inputs */
   .login-input {
     width: 100%;
     background: transparent;
-    color: rgba(255, 255, 255, 0.88);
+    color: rgba(255,255,255,0.9);
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 0.9375rem;
     outline: none;
-    padding: 10px 0;
+    padding: 12px 0;
     border: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    border-bottom: 1px solid rgba(255,255,255,0.09);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    caret-color: rgba(34,211,238,0.9);
+  }
+  .login-input::placeholder { color: rgba(255,255,255,0.15); font-size: 0.875rem; }
+  .login-input:focus {
+    border-bottom-color: rgba(34,211,238,0.7);
+    box-shadow: 0 1px 0 rgba(34,211,238,0.14);
+  }
+
+  /* Primary CTA button — sharp outlined, JetBrains Mono */
+  .btn-jarvis {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    padding: 15px 24px;
+    border: 1px solid rgba(34,211,238,0.22);
+    border-radius: 3px;
+    background: transparent;
+    color: rgba(34,211,238,0.72);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.67rem;
+    font-weight: 500;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.28s ease, border-color 0.28s ease,
+                background 0.28s ease, box-shadow 0.28s ease;
+  }
+  .btn-jarvis:hover:not(:disabled) {
+    color: rgba(255,255,255,0.92);
+    border-color: rgba(34,211,238,0.55);
+    background: rgba(34,211,238,0.042);
+    box-shadow: 0 0 32px rgba(34,211,238,0.1), inset 0 0 24px rgba(34,211,238,0.03);
+  }
+  .btn-jarvis:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn-jarvis:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+
+  /* Conversation input container */
+  .input-shell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 12px;
+    padding: 5px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
     transition: border-color 0.25s ease;
   }
-  .login-input::placeholder {
-    color: rgba(255, 255, 255, 0.18);
+  .input-shell:focus-within {
+    border-color: rgba(34,211,238,0.22);
   }
-  .login-input:focus {
-    border-bottom-color: rgba(34, 211, 238, 0.55);
+
+  /* Status dot */
+  .status-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: dot-pulse 2.5s ease-in-out infinite;
   }
 
   .glass {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255,255,255,0.03);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(34, 211, 238, 0.12);
-  }
-
-  .glass-md {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(34, 211, 238, 0.15);
-  }
-
-  .glass-heavy {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(34, 211, 238, 0.2);
-  }
-
-  .text-cyan-glow {
-    color: #22d3ee;
-    text-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
-  }
-
-  .border-cyan-glow {
-    border-color: rgba(34, 211, 238, 0.4);
-    box-shadow: 0 0 12px rgba(34, 211, 238, 0.15), inset 0 0 12px rgba(34, 211, 238, 0.05);
+    border: 1px solid rgba(34,211,238,0.12);
   }
 }

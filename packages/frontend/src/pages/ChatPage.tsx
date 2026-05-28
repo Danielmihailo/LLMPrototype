@@ -25,7 +25,7 @@ import { api, streamMessage, type Action } from "@/lib/api";
 import { useSpeech } from "@/hooks/useSpeech";
 import type { OrbState } from "@/components/3d/ChatOrb";
 
-/* ── Error boundary for Three.js canvas failures ────────────────────── */
+/* ── Error boundary ──────────────────────────────────────────────────── */
 class OrbErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean }
@@ -37,15 +37,13 @@ class OrbErrorBoundary extends Component<
   static getDerivedStateFromError() { return { hasError: true }; }
   render() {
     if (this.state.hasError) {
-      // Fallback: simple pulsing ring, no 3D
       return (
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{
-            width: 160, height: 160, borderRadius: "50%",
-            border: "1px solid rgba(34,211,238,0.25)",
-            animation: "pulse 3s ease-in-out infinite",
-            boxShadow: "0 0 60px rgba(34,211,238,0.08)",
-          }} />
+          <motion.div
+            style={{ width: 180, height: 180, borderRadius: "50%", border: "1px solid rgba(34,211,238,0.18)" }}
+            animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.97, 1.03, 0.97] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
         </div>
       );
     }
@@ -53,15 +51,12 @@ class OrbErrorBoundary extends Component<
   }
 }
 
-/* ── Orb fallback (while lazy-loading Three.js) ─────────────────────── */
+/* ── Orb fallback ────────────────────────────────────────────────────── */
 function OrbFallback() {
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <motion.div
-        style={{
-          width: 120, height: 120, borderRadius: "50%",
-          border: "1px solid rgba(34,211,238,0.2)",
-        }}
+        style={{ width: 140, height: 140, borderRadius: "50%", border: "1px solid rgba(34,211,238,0.15)" }}
         animate={{ opacity: [0.2, 0.5, 0.2], scale: [0.97, 1.03, 0.97] }}
         transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
       />
@@ -73,7 +68,7 @@ const ChatOrb = lazy(() =>
   import("@/components/3d/ChatOrb").then((m) => ({ default: m.ChatOrb })),
 );
 
-/* ── types ─────────────────────────────────────────────────────────── */
+/* ── Types ───────────────────────────────────────────────────────────── */
 interface ChatMessage {
   id: string;
   role: "user" | "jarvis";
@@ -86,18 +81,18 @@ interface ActionState {
   actionId: string | null;
 }
 
-/* ── streaming cursor ────────────────────────────────────────────────── */
+/* ── Streaming cursor ────────────────────────────────────────────────── */
 function Cursor() {
   return (
     <motion.span
-      className="inline-block w-[2px] h-[0.85em] bg-cyan-400/80 ml-[2px] align-middle rounded-sm"
+      className="inline-block w-[2px] h-[0.8em] bg-cyan-400/70 ml-[3px] align-middle rounded-sm"
       animate={{ opacity: [1, 0] }}
-      transition={{ duration: 0.55, repeat: Infinity }}
+      transition={{ duration: 0.5, repeat: Infinity }}
     />
   );
 }
 
-/* ── shop connect bottom sheet ──────────────────────────────────────── */
+/* ── Shop modal ──────────────────────────────────────────────────────── */
 function ShopModal({ onClose }: { onClose: () => void }) {
   const [platform, setPlatform] = useState<"shopify" | "wordpress" | null>(null);
   const [shopDomain, setShopDomain] = useState("");
@@ -131,9 +126,19 @@ function ShopModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const lineStyle = { borderBottom: "1px solid rgba(255,255,255,0.09)" };
-  const inputClass =
-    "w-full bg-transparent text-white text-sm placeholder:text-white/20 outline-none py-2.5 transition-colors duration-200";
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    background: "transparent",
+    color: "rgba(255,255,255,0.88)",
+    fontSize: "0.9rem",
+    outline: "none",
+    padding: "10px 0",
+    border: "none",
+    borderBottom: "1px solid rgba(255,255,255,0.09)",
+    caretColor: "rgba(34,211,238,0.9)",
+    transition: "border-color 0.25s ease",
+    fontFamily: "'Inter', system-ui, sans-serif",
+  };
 
   return (
     <motion.div
@@ -141,169 +146,111 @@ function ShopModal({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      style={{ backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.55)" }}
+      style={{ backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.6)" }}
       onClick={onClose}
     >
       <motion.div
-        className="w-full max-w-lg bg-[#050505] px-6 pt-5 pb-10"
+        className="w-full max-w-lg px-6 pt-5 pb-12"
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 320 }}
+        transition={{ type: "spring", damping: 32, stiffness: 340 }}
         onClick={(e) => e.stopPropagation()}
-        style={{ borderTop: "1px solid rgba(255,255,255,0.07)", borderRadius: "20px 20px 0 0" }}
+        style={{
+          background: "#050505",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: "18px 18px 0 0",
+        }}
       >
-        {/* drag handle */}
-        <div className="w-9 h-[3px] bg-white/15 rounded-full mx-auto mb-6" />
+        {/* Drag handle */}
+        <div className="w-8 h-[3px] rounded-full mx-auto mb-7" style={{ background: "rgba(255,255,255,0.14)" }} />
 
-        <div className="flex items-center justify-between mb-7">
-          <h2
-            className="text-white/80 font-semibold text-sm tracking-wide"
-            style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}
+        <div className="flex items-center justify-between mb-8">
+          <span
+            className="hud"
+            style={{ color: "rgba(34,211,238,0.65)", letterSpacing: "0.22em" }}
           >
-            Shop verbinden
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-white/25 hover:text-white/60 transition-colors p-1"
-          >
+            SHOP VERBINDEN
+          </span>
+          <button onClick={onClose} className="transition-colors p-1" style={{ color: "rgba(255,255,255,0.22)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.22)")}>
             <X className="size-4" />
           </button>
         </div>
 
         <AnimatePresence mode="wait">
           {!platform && (
-            <motion.div
-              key="picker"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="space-y-1"
-            >
-              {(
-                [
-                  { id: "shopify" as const, name: "Shopify", sub: "OAuth — sicher & in 30 Sekunden" },
-                  { id: "wordpress" as const, name: "WordPress / WooCommerce", sub: "Über Application Password" },
-                ] as const
-              ).map((p) => (
+            <motion.div key="picker" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} className="space-y-1">
+              {([
+                { id: "shopify"   as const, name: "Shopify",                 sub: "OAuth — sicher & in 30 Sekunden" },
+                { id: "wordpress" as const, name: "WordPress / WooCommerce", sub: "Über Application Password" },
+              ]).map((p) => (
                 <button
                   key={p.id}
                   onClick={() => { setPlatform(p.id); setError(""); }}
-                  className="w-full flex items-center justify-between py-4 text-left group transition-colors hover:bg-white/[0.025] px-1 rounded-lg"
+                  className="w-full flex items-center justify-between py-4 text-left px-2 rounded-lg transition-colors"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div>
-                    <div className="text-white/75 text-sm font-medium">{p.name}</div>
-                    <div className="text-white/30 text-xs mt-0.5">{p.sub}</div>
+                    <div className="text-sm font-medium mb-0.5" style={{ color: "rgba(255,255,255,0.78)" }}>{p.name}</div>
+                    <div className="hud" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.06em" }}>{p.sub}</div>
                   </div>
-                  <ChevronRight className="size-4 text-white/20 group-hover:text-cyan-400/60 transition-colors" />
+                  <ChevronRight className="size-4 shrink-0 transition-colors" style={{ color: "rgba(255,255,255,0.18)" }} />
                 </button>
               ))}
             </motion.div>
           )}
 
           {platform === "shopify" && (
-            <motion.div
-              key="shopify"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              className="space-y-6"
-            >
-              <button
-                onClick={() => { setPlatform(null); setError(""); }}
-                className="text-white/30 text-xs hover:text-white/60 transition-colors"
-              >
+            <motion.div key="shopify" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} className="space-y-7">
+              <button onClick={() => { setPlatform(null); setError(""); }} className="hud transition-colors" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.1em" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.28)")}>
                 ← Zurück
               </button>
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-white/30 tracking-[0.2em] uppercase">
-                  Shop-Domain
-                </label>
+              <div className="space-y-2">
+                <label className="hud block" style={{ color: "rgba(255,255,255,0.28)" }}>Shop-Domain</label>
                 <input
-                  type="text"
-                  value={shopDomain}
-                  onChange={(e) => setShopDomain(e.target.value)}
-                  placeholder="meinshop.myshopify.com"
-                  autoFocus
-                  className={inputClass}
-                  style={lineStyle}
-                  onFocus={(e) =>
-                    (e.currentTarget.style.borderBottom = "1px solid rgba(34,211,238,0.45)")
-                  }
-                  onBlur={(e) =>
-                    (e.currentTarget.style.borderBottom = "1px solid rgba(255,255,255,0.09)")
-                  }
+                  type="text" value={shopDomain} onChange={(e) => setShopDomain(e.target.value)}
+                  placeholder="meinshop.myshopify.com" autoFocus style={inputStyle}
+                  onFocus={(e) => (e.currentTarget.style.borderBottom = "1px solid rgba(34,211,238,0.55)")}
+                  onBlur={(e) => (e.currentTarget.style.borderBottom = "1px solid rgba(255,255,255,0.09)")}
                 />
               </div>
-              {error && <p className="text-rose-400/70 text-xs">{error}</p>}
-              <button
-                onClick={connectShopify}
-                disabled={loading || !shopDomain.trim()}
-                className="w-full py-3 text-sm text-cyan-400/80 hover:text-white disabled:opacity-30 transition-colors"
-                style={{ borderBottom: "1px solid rgba(34,211,238,0.22)" }}
-              >
-                {loading ? (
-                  <Loader2 className="size-4 animate-spin mx-auto" />
-                ) : (
-                  "Mit Shopify verbinden →"
-                )}
+              {error && <p className="hud" style={{ color: "rgba(248,113,113,0.8)", letterSpacing: "0.04em" }}>{error}</p>}
+              <button onClick={connectShopify} disabled={loading || !shopDomain.trim()} className="btn-jarvis">
+                {loading ? <Loader2 className="size-3.5 animate-spin mx-auto" /> : "Mit Shopify verbinden"}
               </button>
             </motion.div>
           )}
 
           {platform === "wordpress" && (
-            <motion.div
-              key="wordpress"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              className="space-y-5"
-            >
-              <button
-                onClick={() => { setPlatform(null); setError(""); }}
-                className="text-white/30 text-xs hover:text-white/60 transition-colors"
-              >
+            <motion.div key="wordpress" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} className="space-y-6">
+              <button onClick={() => { setPlatform(null); setError(""); }} className="hud transition-colors" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.1em" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.28)")}>
                 ← Zurück
               </button>
-              {(
-                [
-                  { label: "Website URL", val: wpUrl, set: setWpUrl, ph: "https://meinshop.de", type: "url" },
-                  { label: "Benutzername", val: wpUser, set: setWpUser, ph: "admin", type: "text" },
-                  { label: "Application Password", val: wpPass, set: setWpPass, ph: "xxxx xxxx xxxx xxxx", type: "password" },
-                ] as const
-              ).map((f) => (
-                <div key={f.label} className="space-y-1.5">
-                  <label className="text-[10px] text-white/30 tracking-[0.2em] uppercase">
-                    {f.label}
-                  </label>
+              {([
+                { label: "Website URL",         val: wpUrl,  set: setWpUrl,  ph: "https://meinshop.de",       type: "url"      },
+                { label: "Benutzername",         val: wpUser, set: setWpUser, ph: "admin",                      type: "text"     },
+                { label: "Application Password", val: wpPass, set: setWpPass, ph: "xxxx xxxx xxxx xxxx",        type: "password" },
+              ] as const).map((f) => (
+                <div key={f.label} className="space-y-2">
+                  <label className="hud block" style={{ color: "rgba(255,255,255,0.28)" }}>{f.label}</label>
                   <input
-                    type={f.type}
-                    value={f.val}
-                    onChange={(e) => f.set(e.target.value)}
-                    placeholder={f.ph}
-                    className={inputClass}
-                    style={lineStyle}
-                    onFocus={(e) =>
-                      (e.currentTarget.style.borderBottom = "1px solid rgba(34,211,238,0.45)")
-                    }
-                    onBlur={(e) =>
-                      (e.currentTarget.style.borderBottom = "1px solid rgba(255,255,255,0.09)")
-                    }
+                    type={f.type} value={f.val} onChange={(e) => f.set(e.target.value)} placeholder={f.ph} style={inputStyle}
+                    onFocus={(e) => (e.currentTarget.style.borderBottom = "1px solid rgba(34,211,238,0.55)")}
+                    onBlur={(e) => (e.currentTarget.style.borderBottom = "1px solid rgba(255,255,255,0.09)")}
                   />
                 </div>
               ))}
-              {error && <p className="text-rose-400/70 text-xs">{error}</p>}
-              <button
-                onClick={connectWordPress}
-                disabled={loading || !wpUrl.trim() || !wpUser.trim() || !wpPass.trim()}
-                className="w-full py-3 text-sm text-cyan-400/80 hover:text-white disabled:opacity-30 transition-colors"
-                style={{ borderBottom: "1px solid rgba(34,211,238,0.22)" }}
-              >
-                {loading ? (
-                  <Loader2 className="size-4 animate-spin mx-auto" />
-                ) : (
-                  "WordPress verbinden →"
-                )}
+              {error && <p className="hud" style={{ color: "rgba(248,113,113,0.8)", letterSpacing: "0.04em" }}>{error}</p>}
+              <button onClick={connectWordPress} disabled={loading || !wpUrl.trim() || !wpUser.trim() || !wpPass.trim()} className="btn-jarvis">
+                {loading ? <Loader2 className="size-3.5 animate-spin mx-auto" /> : "WordPress verbinden"}
               </button>
             </motion.div>
           )}
@@ -313,146 +260,117 @@ function ShopModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* ── main ChatPage ───────────────────────────────────────────────────── */
+/* ── Main ChatPage ────────────────────────────────────────────────────── */
 export function ChatPage() {
   const { state, dispatch } = useAppState();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
+  const [messages,    setMessages]    = useState<ChatMessage[]>([]);
+  const [input,       setInput]       = useState("");
+  const [sending,     setSending]     = useState(false);
   const [actionState, setActionState] = useState<ActionState | null>(null);
-  const [error, setError] = useState("");
-  const [orbState, setOrbState] = useState<OrbState>("idle");
-  const [shopModal, setShopModal] = useState(false);
+  const [error,       setError]       = useState("");
+  const [orbState,    setOrbState]    = useState<OrbState>("idle");
+  const [shopModal,   setShopModal]   = useState(false);
 
-  const messagesRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef        = useRef<HTMLInputElement>(null);
-  const jarvisTextRef   = useRef("");
-  const voiceInputRef   = useRef(false);   // last send was voice → speak response
-  const convRef         = useRef(false);   // conversation mode active
-  const listenAgainRef  = useRef<() => void>(() => {}); // stable callback
+  const messagesRef   = useRef<HTMLDivElement>(null);
+  const bottomRef     = useRef<HTMLDivElement>(null);
+  const inputRef      = useRef<HTMLInputElement>(null);
+  const jarvisTextRef = useRef("");
+  const voiceInputRef = useRef(false);
+  const convRef       = useRef(false);
+  const listenAgainRef = useRef<() => void>(() => {});
 
   const speech = useSpeech("de-DE");
 
-  /* conversation init */
+  /* State → color mapping for HUD dot */
+  const stateColor = {
+    idle:      "rgba(255,255,255,0.28)",
+    listening: "rgba(167,139,250,1)",
+    thinking:  "rgba(251,191,36,1)",
+    speaking:  "rgba(34,211,238,1)",
+  }[orbState];
+
+  const orbLabel = { idle: "Bereit", listening: "Hört zu", thinking: "Denkt", speaking: "Spricht" }[orbState];
+
+  /* Conversation init */
   useEffect(() => {
     if (!state.conversationId) {
-      api
-        .createConversation()
-        .then(({ conversation_id }) =>
-          dispatch({ type: "SET_CONVERSATION", payload: conversation_id }),
-        )
+      api.createConversation()
+        .then(({ conversation_id }) => dispatch({ type: "SET_CONVERSATION", payload: conversation_id }))
         .catch(() => setError("Konnte Konversation nicht starten"));
     }
   }, [state.conversationId, dispatch]);
 
-  /* auto-scroll */
+  /* Auto-scroll */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  /* sync orb with speech */
+  /* Sync orb with speech */
   useEffect(() => {
-    if (speech.isListening) setOrbState("listening");
-    else if (speech.isSpeaking) setOrbState("speaking");
+    if (speech.isListening)      setOrbState("listening");
+    else if (speech.isSpeaking)  setOrbState("speaking");
   }, [speech.isListening, speech.isSpeaking]);
 
-  /* send */
-  const send = useCallback(
-    async (textOverride?: string) => {
-      const text = (textOverride ?? input).trim();
-      if (!text || !state.conversationId || sending) return;
+  /* Send */
+  const send = useCallback(async (textOverride?: string) => {
+    const text = (textOverride ?? input).trim();
+    if (!text || !state.conversationId || sending) return;
 
-      setInput("");
-      setError("");
-      setActionState(null);
-      setSending(true);
-      setOrbState("thinking");
-      jarvisTextRef.current = "";
+    setInput("");
+    setError("");
+    setActionState(null);
+    setSending(true);
+    setOrbState("thinking");
+    jarvisTextRef.current = "";
 
-      const userMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: text,
-      };
-      const jarvisMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "jarvis",
-        content: "",
-        streaming: true,
-      };
-      setMessages((prev) => [...prev, userMsg, jarvisMsg]);
+    const userMsg:   ChatMessage = { id: crypto.randomUUID(), role: "user",   content: text };
+    const jarvisMsg: ChatMessage = { id: crypto.randomUUID(), role: "jarvis", content: "", streaming: true };
+    setMessages((prev) => [...prev, userMsg, jarvisMsg]);
 
-      try {
-        const result = await streamMessage(
-          state.conversationId,
-          text,
-          (token) => {
-            jarvisTextRef.current += token;
-            setOrbState("speaking");
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === jarvisMsg.id
-                  ? { ...m, content: m.content + token }
-                  : m,
-              ),
-            );
-          },
-        );
-
+    try {
+      const result = await streamMessage(state.conversationId, text, (token) => {
+        jarvisTextRef.current += token;
+        setOrbState("speaking");
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === jarvisMsg.id ? { ...m, streaming: false } : m,
-          ),
+          prev.map((m) => m.id === jarvisMsg.id ? { ...m, content: m.content + token } : m),
         );
+      });
 
-        if (result.actions.length > 0) {
-          setActionState({ actions: result.actions, actionId: result.action_id });
-        }
+      setMessages((prev) =>
+        prev.map((m) => m.id === jarvisMsg.id ? { ...m, streaming: false } : m),
+      );
 
-        // Speak if this message was sent via voice
-        if (voiceInputRef.current && jarvisTextRef.current) {
-          await speech.speak(jarvisTextRef.current, () => {
-            setOrbState("idle");
-            // Conversation loop: auto-restart listening after JARVIS speaks
-            if (convRef.current) {
-              setTimeout(() => listenAgainRef.current(), 350);
-            }
-          });
-        } else {
-          setOrbState("idle");
-        }
-        voiceInputRef.current = false;
-      } catch (err) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === jarvisMsg.id
-              ? { ...m, content: "⚠ " + String(err), streaming: false }
-              : m,
-          ),
-        );
-        voiceInputRef.current = false;
-        setOrbState("idle");
-      } finally {
-        setSending(false);
-        inputRef.current?.focus();
+      if (result.actions.length > 0) {
+        setActionState({ actions: result.actions, actionId: result.action_id });
       }
-    },
-    [input, state.conversationId, sending, speech],
-  );
+
+      if (voiceInputRef.current && jarvisTextRef.current) {
+        await speech.speak(jarvisTextRef.current, () => {
+          setOrbState("idle");
+          if (convRef.current) setTimeout(() => listenAgainRef.current(), 350);
+        });
+      } else {
+        setOrbState("idle");
+      }
+      voiceInputRef.current = false;
+    } catch (err) {
+      setMessages((prev) =>
+        prev.map((m) => m.id === jarvisMsg.id ? { ...m, content: "⚠ " + String(err), streaming: false } : m),
+      );
+      voiceInputRef.current = false;
+      setOrbState("idle");
+    } finally {
+      setSending(false);
+      inputRef.current?.focus();
+    }
+  }, [input, state.conversationId, sending, speech]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      void send();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
   };
 
-  // Always-fresh function to start one listening round.
-  // Uses a ref so the speak() onDone closure always sees the latest version.
   const startOneRound = useCallback(() => {
     if (!convRef.current) return;
-    // Fresh recognition instance every call (continuous=false is reliable)
     speech.startListening(
       (transcript) => {
         if (!transcript.trim()) return;
@@ -460,25 +378,19 @@ export function ChatPage() {
         setInput(transcript);
         void send(transcript);
       },
-      () => {
-        // recognition ended without usable result — stay ready
-        if (convRef.current && !sending) setOrbState("idle");
-      },
+      () => { if (convRef.current && !sending) setOrbState("idle"); },
     );
   }, [speech, send, sending]);
 
-  // Keep ref in sync so speak's onDone can call it
   listenAgainRef.current = startOneRound;
 
   const handleMic = () => {
     if (convRef.current || speech.isListening) {
-      // Exit conversation mode
       convRef.current = false;
       speech.stopListening();
       speech.stopSpeaking();
       setOrbState("idle");
     } else {
-      // Enter conversation mode — start first round
       convRef.current = true;
       startOneRound();
     }
@@ -490,27 +402,12 @@ export function ChatPage() {
     dispatch({ type: "SET_CONVERSATION", payload: null });
   };
 
-  const handleConfirm = async () => {
-    if (!actionState?.actionId) return;
-    await api.confirmAction(actionState.actionId).catch(() => {});
-    setActionState(null);
-  };
-  const handleRollback = async () => {
-    if (!actionState?.actionId) return;
-    await api.rollbackAction(actionState.actionId).catch(() => {});
-    setActionState(null);
-  };
-
-  const orbLabel = {
-    idle: "Bereit",
-    listening: "Hört zu …",
-    thinking: "Denkt …",
-    speaking: "Spricht …",
-  }[orbState];
+  const handleConfirm  = async () => { if (!actionState?.actionId) return; await api.confirmAction(actionState.actionId).catch(() => {}); setActionState(null); };
+  const handleRollback = async () => { if (!actionState?.actionId) return; await api.rollbackAction(actionState.actionId).catch(() => {}); setActionState(null); };
 
   const suggestions = ["Zeig meine Produkte", "Erstelle einen Rabatt", "Was läuft heute gut?"];
 
-  /* ── render ──────────────────────────────────────────────────────── */
+  /* ── Render ──────────────────────────────────────────────────────────── */
   return (
     <div style={{ position: "absolute", inset: 0, background: "#000", overflow: "hidden" }}>
 
@@ -524,39 +421,61 @@ export function ChatPage() {
       </div>
 
       {/* ── TOP BAR ── */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between px-5 pt-6 pointer-events-none">
-        {/* logout */}
+      <div
+        className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5"
+        style={{
+          height: "54px",
+          borderBottom: "1px solid rgba(255,255,255,0.048)",
+          background: "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)",
+        }}
+      >
+        {/* Logout */}
         <button
           onClick={handleLogout}
-          className="pointer-events-auto text-white/15 hover:text-white/45 transition-colors p-1.5"
+          className="p-1.5 transition-colors"
+          style={{ color: "rgba(255,255,255,0.28)" }}
           title="Ausloggen"
+          onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.28)")}
         >
-          <LogOut className="size-4" />
+          <LogOut className="size-[15px]" />
         </button>
 
-        {/* center wordmark + state */}
-        <div className="flex flex-col items-center gap-1">
+        {/* Center: brand + state */}
+        <div className="flex flex-col items-center gap-1.5">
           <span
-            className="text-[10px] tracking-[0.35em] uppercase text-white/25 font-medium"
-            style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif" }}
+            style={{
+              fontFamily: "'Space Grotesk', system-ui, sans-serif",
+              fontSize: "0.62rem",
+              fontWeight: 600,
+              letterSpacing: "0.44em",
+              textIndent: "0.44em",
+              color: "rgba(255,255,255,0.62)",
+            }}
           >
             JARVIS
           </span>
           <AnimatePresence mode="wait">
-            <motion.span
+            <motion.div
               key={orbState}
+              className="flex items-center gap-1.5"
               initial={{ opacity: 0, y: 3 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -3 }}
-              transition={{ duration: 0.18 }}
-              className="text-[10px] text-cyan-400/55 tracking-wide"
+              transition={{ duration: 0.15 }}
             >
-              {orbLabel}
-            </motion.span>
+              <span
+                className="status-dot"
+                style={{ background: stateColor, boxShadow: `0 0 8px ${stateColor}` }}
+              />
+              <span className="hud" style={{ color: stateColor }}>
+                {orbLabel}
+              </span>
+            </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* placeholder to keep flex layout centered */}
+        {/* Right placeholder */}
         <div className="size-7" />
       </div>
 
@@ -564,32 +483,39 @@ export function ChatPage() {
       <AnimatePresence>
         {actionState && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="absolute top-20 left-0 right-0 z-10 flex justify-center px-5"
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute z-10 flex justify-center px-5"
+            style={{ top: "66px", left: 0, right: 0 }}
           >
             <div
-              className="flex items-center gap-4 px-4 py-3 rounded-xl"
+              className="flex items-center gap-5 px-5 py-3"
               style={{
-                background: "rgba(10,10,10,0.85)",
-                border: "1px solid rgba(255,255,255,0.07)",
-                backdropFilter: "blur(12px)",
+                background: "rgba(8,8,8,0.92)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "8px",
               }}
             >
-              <span className="text-white/50 text-xs">
+              <span className="hud" style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.08em" }}>
                 {actionState.actions.length} Aktion{actionState.actions.length !== 1 ? "en" : ""} ausstehend
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-4">
                 <button
                   onClick={handleConfirm}
-                  className="flex items-center gap-1.5 text-xs text-emerald-400/80 hover:text-emerald-300 transition-colors"
+                  className="flex items-center gap-1.5 hud transition-colors"
+                  style={{ color: "rgba(52,211,153,0.8)", letterSpacing: "0.1em" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(52,211,153,1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(52,211,153,0.8)")}
                 >
                   <CheckCircle className="size-3.5" /> Bestätigen
                 </button>
                 <button
                   onClick={handleRollback}
-                  className="flex items-center gap-1.5 text-xs text-rose-400/80 hover:text-rose-300 transition-colors"
+                  className="flex items-center gap-1.5 hud transition-colors"
+                  style={{ color: "rgba(248,113,113,0.75)", letterSpacing: "0.1em" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(248,113,113,1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(248,113,113,0.75)")}
                 >
                   <XCircle className="size-3.5" /> Abbrechen
                 </button>
@@ -601,34 +527,53 @@ export function ChatPage() {
 
       {/* ── MESSAGES OVERLAY ── */}
       <div
-        className="absolute bottom-[72px] left-0 right-0 z-10"
+        className="absolute left-0 right-0 z-10"
         style={{
-          height: "45vh",
+          top: "54px",
+          bottom: "86px",
           background:
-            "linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.45) 55%, transparent 100%)",
+            "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.38) 55%, transparent 100%)",
         }}
       >
         <div
           ref={messagesRef}
-          className="h-full overflow-y-auto px-5 sm:px-8 pb-3 pt-8 flex flex-col gap-2.5 scrollbar-hide"
-          style={{ maxWidth: "680px", margin: "0 auto" }}
+          className="h-full overflow-y-auto px-5 sm:px-8 pb-4 pt-10 flex flex-col gap-4 scrollbar-hide"
+          style={{ maxWidth: "700px", margin: "0 auto" }}
         >
-          {/* empty state suggestions */}
+          {/* Empty state */}
           {messages.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="flex flex-col items-center gap-4 mt-auto mb-4"
+              transition={{ delay: 0.7 }}
+              className="flex flex-col items-center gap-6 mt-auto mb-6"
             >
-              <p className="text-white/18 text-sm text-center">Wie kann ich helfen?</p>
+              <p
+                className="hud text-center"
+                style={{ color: "rgba(255,255,255,0.18)", letterSpacing: "0.12em" }}
+              >
+                Wie kann ich helfen?
+              </p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => { setInput(s); inputRef.current?.focus(); }}
-                    className="px-3.5 py-1.5 text-xs text-white/30 hover:text-white/60 rounded-full transition-colors"
-                    style={{ border: "1px solid rgba(255,255,255,0.07)" }}
+                    className="hud px-4 py-2.5 transition-all duration-200"
+                    style={{
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "3px",
+                      color: "rgba(255,255,255,0.28)",
+                      letterSpacing: "0.06em",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "rgba(255,255,255,0.68)";
+                      e.currentTarget.style.borderColor = "rgba(34,211,238,0.25)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = "rgba(255,255,255,0.28)";
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                    }}
                   >
                     {s}
                   </button>
@@ -637,47 +582,47 @@ export function ChatPage() {
             </motion.div>
           )}
 
-          {/* message list */}
+          {/* Messages */}
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
               <motion.div
                 key={msg.id}
                 layout
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className={`flex ${
-                  msg.role === "user"
-                    ? "justify-end"
-                    : "justify-start items-start gap-2"
-                }`}
+                transition={{ duration: 0.26, ease: "easeOut" }}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {msg.role === "jarvis" && (
+                {msg.role === "jarvis" ? (
+                  /* JARVIS message — left-border accent */
                   <div
-                    className="size-[6px] rounded-full bg-cyan-400/60 shrink-0 mt-[8px]"
-                    style={{ boxShadow: "0 0 6px rgba(34,211,238,0.4)" }}
-                  />
+                    className="max-w-[82%] pl-4 py-0.5"
+                    style={{ borderLeft: "1.5px solid rgba(34,211,238,0.38)" }}
+                  >
+                    <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.82)" }}>
+                      {msg.streaming && !msg.content ? (
+                        <motion.span
+                          animate={{ opacity: [0.3, 0.7, 0.3] }}
+                          transition={{ duration: 1.2, repeat: Infinity }}
+                          style={{ color: "rgba(34,211,238,0.5)" }}
+                        >
+                          …
+                        </motion.span>
+                      ) : (
+                        msg.content
+                      )}
+                      {msg.streaming && msg.content && <Cursor />}
+                    </p>
+                  </div>
+                ) : (
+                  /* User message — right-aligned, dim */
+                  <p
+                    className="text-sm leading-relaxed max-w-[72%] text-right"
+                    style={{ color: "rgba(255,255,255,0.38)" }}
+                  >
+                    {msg.content}
+                  </p>
                 )}
-                <p
-                  className={`text-sm leading-relaxed max-w-[76%] ${
-                    msg.role === "user"
-                      ? "text-white/60 text-right"
-                      : "text-cyan-50/75"
-                  }`}
-                >
-                  {msg.streaming && !msg.content ? (
-                    <motion.span
-                      animate={{ opacity: [0.3, 0.7, 0.3] }}
-                      transition={{ duration: 1.2, repeat: Infinity }}
-                      className="text-cyan-400/50"
-                    >
-                      …
-                    </motion.span>
-                  ) : (
-                    msg.content
-                  )}
-                  {msg.streaming && msg.content && <Cursor />}
-                </p>
               </motion.div>
             ))}
           </AnimatePresence>
@@ -688,36 +633,66 @@ export function ChatPage() {
 
       {/* ── INPUT BAR ── */}
       <div
-        className="absolute bottom-0 left-0 right-0 z-20 px-4 sm:px-6 pb-5 pt-2"
+        className="absolute bottom-0 left-0 right-0 z-20 px-4 sm:px-6"
         style={{
+          paddingBottom: "22px",
+          paddingTop: "8px",
           background:
-            "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%)",
+            "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 65%, transparent 100%)",
         }}
       >
-        {/* Error / mic permission notice */}
+        {/* Error notice */}
         {(error || speech.micError) && (
-          <p className="text-rose-400/60 text-xs text-center mb-2">
+          <p
+            className="hud text-center mb-3"
+            style={{ color: "rgba(248,113,113,0.7)", letterSpacing: "0.06em" }}
+          >
             {speech.micError === "permission-denied"
-              ? "Mikrofon-Zugriff verweigert — bitte in den Browser-Einstellungen erlauben"
+              ? "Mikrofon-Zugriff verweigert"
               : speech.micError === "not-supported"
-              ? "Spracherkennung wird von diesem Browser nicht unterstützt"
+              ? "Mikrofon nicht unterstützt"
               : speech.micError === "no-speech"
-              ? "Keine Sprache erkannt — bitte nochmal versuchen"
+              ? "Keine Sprache erkannt"
               : speech.micError === "unknown"
-              ? "Fehler bei der Spracherkennung"
+              ? "Spracherkennungsfehler"
               : error}
           </p>
         )}
 
-        <div
-          className="flex items-center gap-2 max-w-2xl mx-auto"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.11)" }}
-        >
-          {/* Mic button */}
+        {/* Waveform — above input, visible when listening */}
+        <AnimatePresence>
+          {speech.isListening && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex items-center gap-[2px] justify-center mb-3 max-w-2xl mx-auto overflow-hidden"
+            >
+              {Array.from({ length: 28 }).map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="w-[2px] rounded-full"
+                  style={{ background: "rgba(167,139,250,0.6)", height: "16px", originY: 0.5 }}
+                  animate={{ scaleY: [0.06, Math.random() * 0.92 + 0.08, 0.06] }}
+                  transition={{
+                    duration: 0.35 + Math.random() * 0.25,
+                    repeat: Infinity,
+                    delay: i * 0.024,
+                    ease: "easeInOut",
+                  }}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input shell */}
+        <div className="input-shell max-w-2xl mx-auto">
+          {/* Mic */}
           {speech.supported && (
             <button
               onClick={handleMic}
-              className="relative shrink-0 p-2 transition-colors"
+              className="relative shrink-0 p-1.5 transition-colors"
               style={{
                 color: speech.micError === "permission-denied"
                   ? "rgba(248,113,113,0.7)"
@@ -725,21 +700,14 @@ export function ChatPage() {
                   ? "rgba(167,139,250,1)"
                   : "rgba(255,255,255,0.28)",
               }}
-              title={
-                speech.micError === "permission-denied"
-                  ? "Mikrofon gesperrt"
-                  : convRef.current
-                  ? "Gespräch beenden"
-                  : "Gespräch starten"
-              }
+              title={convRef.current ? "Gespräch beenden" : "Gespräch starten"}
             >
-              <Mic className="size-[18px]" />
-              {/* pulsing dot = recording / conversation active */}
+              <Mic className="size-[17px]" />
               {(speech.isListening || convRef.current) && !speech.micError && (
                 <motion.span
-                  className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-rose-500"
+                  className="absolute top-1 right-1 size-1.5 rounded-full bg-rose-500"
                   animate={{ opacity: [1, 0.15, 1] }}
-                  transition={{ duration: 0.85, repeat: Infinity }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
                 />
               )}
             </button>
@@ -752,68 +720,55 @@ export function ChatPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              speech.isListening
-                ? "Hört zu …"
-                : convRef.current
-                ? "JARVIS hört zu …"
-                : "Sprich mit JARVIS …"
+              speech.isListening ? "Hört zu …"
+              : convRef.current   ? "JARVIS hört zu …"
+              : "Sprich mit JARVIS …"
             }
             disabled={sending || !state.conversationId || speech.isListening}
             autoComplete="off"
-            className="flex-1 bg-transparent text-white text-sm placeholder:text-white/22 outline-none py-3 disabled:opacity-40"
+            style={{
+              flex: 1,
+              background: "transparent",
+              color: "rgba(255,255,255,0.88)",
+              fontSize: "0.875rem",
+              outline: "none",
+              padding: "8px 0",
+              border: "none",
+              caretColor: "rgba(34,211,238,0.9)",
+              fontFamily: "'Inter', system-ui, sans-serif",
+              opacity: (sending || !state.conversationId || speech.isListening) ? 0.4 : 1,
+            }}
+            className="placeholder:text-white/20"
           />
 
-          {/* Shop button */}
+          {/* Shop */}
           <button
             onClick={() => setShopModal(true)}
             title="Shop verbinden"
-            className="shrink-0 p-2 text-white/22 hover:text-white/55 transition-colors"
+            className="shrink-0 p-1.5 transition-colors"
+            style={{ color: "rgba(255,255,255,0.22)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.22)")}
           >
-            <Store className="size-4" />
+            <Store className="size-[15px]" />
           </button>
 
           {/* Send */}
           <button
             onClick={() => void send()}
             disabled={sending || !input.trim() || !state.conversationId}
-            className="shrink-0 p-2 text-white/30 hover:text-cyan-400/80 disabled:opacity-20 transition-colors"
+            className="shrink-0 p-1.5 transition-colors"
+            style={{ color: "rgba(255,255,255,0.28)" }}
+            onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.color = "rgba(34,211,238,0.85)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.28)")}
           >
             {sending ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-[15px] animate-spin" />
             ) : (
-              <Send className="size-4" />
+              <Send className="size-[15px]" />
             )}
           </button>
         </div>
-
-        {/* Listening waveform */}
-        <AnimatePresence>
-          {speech.isListening && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-2 flex items-center gap-[2px] justify-center overflow-hidden"
-            >
-              {Array.from({ length: 32 }).map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="w-[2px] rounded-full bg-purple-400/50"
-                  animate={{
-                    scaleY: [0.08, Math.random() * 0.9 + 0.1, 0.08],
-                  }}
-                  transition={{
-                    duration: 0.38 + Math.random() * 0.28,
-                    repeat: Infinity,
-                    delay: i * 0.022,
-                    ease: "easeInOut",
-                  }}
-                  style={{ height: "14px", originY: 0.5 }}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* ── SHOP MODAL ── */}
