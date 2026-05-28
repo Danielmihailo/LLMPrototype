@@ -5,6 +5,8 @@ import {
   Suspense,
   lazy,
   useCallback,
+  Component,
+  type ReactNode,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -25,6 +27,50 @@ import { useAppState } from "@/store/state";
 import { api, streamMessage, type Action } from "@/lib/api";
 import { useSpeech } from "@/hooks/useSpeech";
 import type { OrbState } from "@/components/3d/ChatOrb";
+
+/* ── Error boundary for Three.js canvas failures ────────────────────── */
+class OrbErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      // Fallback: simple pulsing ring, no 3D
+      return (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{
+            width: 160, height: 160, borderRadius: "50%",
+            border: "1px solid rgba(34,211,238,0.25)",
+            animation: "pulse 3s ease-in-out infinite",
+            boxShadow: "0 0 60px rgba(34,211,238,0.08)",
+          }} />
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/* ── Orb fallback (while lazy-loading Three.js) ─────────────────────── */
+function OrbFallback() {
+  return (
+    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <motion.div
+        style={{
+          width: 120, height: 120, borderRadius: "50%",
+          border: "1px solid rgba(34,211,238,0.2)",
+        }}
+        animate={{ opacity: [0.2, 0.5, 0.2], scale: [0.97, 1.03, 0.97] }}
+        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+}
 
 const ChatOrb = lazy(() =>
   import("@/components/3d/ChatOrb").then((m) => ({ default: m.ChatOrb })),
@@ -437,13 +483,15 @@ export function ChatPage() {
 
   /* ── render ──────────────────────────────────────────────────────── */
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden">
+    <div style={{ position: "absolute", inset: 0, background: "#000", overflow: "hidden" }}>
 
       {/* ── FULL-SCREEN ORB ── */}
-      <div className="absolute inset-0 z-0">
-        <Suspense fallback={null}>
-          <ChatOrb orbState={orbState} className="w-full h-full" />
-        </Suspense>
+      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+        <OrbErrorBoundary>
+          <Suspense fallback={<OrbFallback />}>
+            <ChatOrb orbState={orbState} className="w-full h-full" />
+          </Suspense>
+        </OrbErrorBoundary>
       </div>
 
       {/* ── TOP BAR ── */}

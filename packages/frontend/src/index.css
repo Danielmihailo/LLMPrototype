@@ -16,20 +16,33 @@
   :root {
     --jarvis-cyan: #22d3ee;
     --jarvis-cyan-glow: rgba(34, 211, 238, 0.35);
-    --jarvis-bg: #030712;
+    --jarvis-bg: #000000;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html { scroll-behavior: smooth; }
+  html, body, #root {
+    height: 100%;
+    scroll-behavior: smooth;
+  }
 
   body {
-    background: var(--jarvis-bg);
+    background: #000;
     color: #e2e8f0;
     font-family: 'Inter', system-ui, sans-serif;
-    min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Chrome autofill: keep transparent dark background ── */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #000 inset !important;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.85) !important;
+    caret-color: white;
+    transition: background-color 9999s ease-in-out 0s;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -48,6 +61,25 @@
 }
 
 @layer components {
+  /* Login page underline inputs */
+  .login-input {
+    width: 100%;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.9375rem;
+    outline: none;
+    padding: 10px 0;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    transition: border-color 0.25s ease;
+  }
+  .login-input::placeholder {
+    color: rgba(255, 255, 255, 0.18);
+  }
+  .login-input:focus {
+    border-bottom-color: rgba(34, 211, 238, 0.55);
+  }
+
   .glass {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(16px);

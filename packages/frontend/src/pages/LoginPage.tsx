@@ -104,16 +104,7 @@ export function LoginPage() {
             required
             autoComplete="email"
             placeholder="deine@email.de"
-            className="w-full bg-transparent text-white text-sm placeholder:text-white/18 outline-none py-2.5 transition-colors duration-300"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.14)" }}
-            onFocus={(e) =>
-              (e.currentTarget.style.borderBottom =
-                "1px solid rgba(34,211,238,0.5)")
-            }
-            onBlur={(e) =>
-              (e.currentTarget.style.borderBottom =
-                "1px solid rgba(255,255,255,0.14)")
-            }
+            className="login-input"
           />
         </div>
 
@@ -130,16 +121,7 @@ export function LoginPage() {
             minLength={8}
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             placeholder="••••••••"
-            className="w-full bg-transparent text-white text-sm placeholder:text-white/18 outline-none py-2.5 transition-colors duration-300"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.14)" }}
-            onFocus={(e) =>
-              (e.currentTarget.style.borderBottom =
-                "1px solid rgba(34,211,238,0.5)")
-            }
-            onBlur={(e) =>
-              (e.currentTarget.style.borderBottom =
-                "1px solid rgba(255,255,255,0.14)")
-            }
+            className="login-input"
           />
         </div>
 
