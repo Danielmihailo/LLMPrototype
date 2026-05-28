@@ -3,7 +3,17 @@ import json
 
 
 PERSONA_PATH = Path(__file__).parent / "jarvis_system.md"
-SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "action-schema.json"
+
+# Resolve docs/action-schema.json — works in Docker (/app) and local dev (repo root)
+def _find_schema() -> Path:
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        candidate = parent / "docs" / "action-schema.json"
+        if candidate.exists():
+            return candidate
+    return here.parents[0] / "action-schema.json"  # fallback (missing = empty schema)
+
+SCHEMA_PATH = _find_schema()
 
 
 def load_persona() -> str:

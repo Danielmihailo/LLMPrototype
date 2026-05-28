@@ -7,6 +7,8 @@ COPY packages/brain/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY packages/brain/ .
+# Copy docs so action-schema.json can be found at runtime
+COPY docs/ /app/docs/
 
 ENV PYTHONPATH=/app
 ENV BRAIN_BACKEND=ollama
