@@ -10,18 +10,15 @@ type AnyRec = any;
  *  3. "Neural" in name   → labeled neural
  *  4. !localService       → any cloud DE voice
  *  5. Any DE local voice
- *  6. EN cloud voice
- *  7. Any EN voice
+ *  6. EN cloud voice → EN local
  */
 function pickBestVoice(lang: string): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
 
-  const isDE = lang.startsWith("de");
   const primary = voices.filter((v) =>
-    isDE ? v.lang.startsWith("de") : v.lang.startsWith(lang.slice(0, 2)),
+    v.lang.startsWith(lang.slice(0, 2)),
   );
-
   const n = (v: SpeechSynthesisVoice) => v.name.toLowerCase();
 
   return (
@@ -40,6 +37,7 @@ export function useSpeech(lang = "de-DE") {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const recRef = useRef<AnyRec>(null);
+  const listeningRef = useRef(false); // track intent separately from state
 
   const supported =
     typeof window !== "undefined" &&
@@ -51,7 +49,11 @@ export function useSpeech(lang = "de-DE") {
     return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
   }, []);
 
-  /** Start listening. Calls onResult with final transcript, then onEnd. */
+  /**
+   * Start listening with continuous mode so Chrome doesn't auto-stop on pauses.
+   * Fires onResult with the transcript when a final result arrives, then stops.
+   * If no speech is detected and recognition ends on its own, calls onEnd.
+   */
   const startListening = useCallback(
     (onResult: (text: string) => void, onEnd?: () => void) => {
       const API = getAPI();
@@ -64,29 +66,65 @@ export function useSpeech(lang = "de-DE") {
       r.lang = lang;
       r.interimResults = false;
       r.maxAlternatives = 1;
-      r.continuous = false;
+      r.continuous = true; // ← don't stop after each pause
+
+      let gotResult = false;
 
       r.onresult = (e: any) => {
-        if (e.results?.length > 0) {
-          const transcript = (
-            e.results[e.results.length - 1][0].transcript as string
-          ).trim();
-          onResult(transcript);
+        // Only handle the latest result set
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) {
+            const transcript = (e.results[i][0].transcript as string).trim();
+            if (transcript) {
+              gotResult = true;
+              listeningRef.current = false;
+              setIsListening(false);
+              r.stop();
+              onResult(transcript);
+              onEnd?.();
+              return;
+            }
+          }
         }
       };
-      r.onend = () => { setIsListening(false); onEnd?.(); };
-      r.onerror = () => { setIsListening(false); };
+
+      r.onend = () => {
+        // Fired when recognition session ends (either manually or on error/timeout)
+        if (!gotResult && listeningRef.current) {
+          // Chrome ended the session before we got a result (e.g. 60s timeout).
+          // Restart automatically.
+          try {
+            r.start();
+            return;
+          } catch {
+            // Can't restart — fall through to cleanup
+          }
+        }
+        listeningRef.current = false;
+        setIsListening(false);
+        if (!gotResult) onEnd?.();
+      };
+
+      r.onerror = (e: any) => {
+        // "no-speech" is not fatal — recognition will auto-end and restart via onend
+        if (e.error === "no-speech") return;
+        listeningRef.current = false;
+        setIsListening(false);
+        onEnd?.();
+      };
 
       recRef.current = r;
-      r.start();
+      listeningRef.current = true;
       setIsListening(true);
+      r.start();
     },
     [getAPI, lang],
   );
 
   const stopListening = useCallback(() => {
-    recRef.current?.stop();
+    listeningRef.current = false;
     setIsListening(false);
+    try { recRef.current?.stop(); } catch { /* ignore */ }
   }, []);
 
   /** Speak text with the best available voice. */
@@ -97,8 +135,8 @@ export function useSpeech(lang = "de-DE") {
 
       const utt = new SpeechSynthesisUtterance(text);
       utt.lang = lang;
-      utt.rate = 1.0;   // natural pacing
-      utt.pitch = 1.0;  // neutral pitch
+      utt.rate = 1.0;
+      utt.pitch = 1.0;
       utt.volume = 1;
 
       const applyVoice = () => {
