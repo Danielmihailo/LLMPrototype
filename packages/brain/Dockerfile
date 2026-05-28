@@ -2,10 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Build context is repo root, so paths are relative to repo root
+COPY packages/brain/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY packages/brain/ .
 
 ENV PYTHONPATH=/app
 ENV BRAIN_BACKEND=ollama
